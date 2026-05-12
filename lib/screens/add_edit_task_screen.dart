@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/task_provider.dart';
 import '../models/task_model.dart';
+import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
 
 class AddEditTaskScreen extends StatefulWidget {
@@ -79,10 +80,10 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           children: [
             _buildSection('Informasi Tugas', [
               _buildTextField(_namaTugasCtrl, 'Nama Tugas', Icons.assignment,
-                validator: (v) => v!.isEmpty ? 'Wajib diisi' : null),
+                  validator: (v) => v!.isEmpty ? 'Wajib diisi' : null),
               const SizedBox(height: 12),
               _buildTextField(_mataKuliahCtrl, 'Mata Kuliah', Icons.school,
-                validator: (v) => v!.isEmpty ? 'Wajib diisi' : null),
+                  validator: (v) => v!.isEmpty ? 'Wajib diisi' : null),
             ]),
             const SizedBox(height: 16),
             _buildSection('Deadline', [
@@ -95,16 +96,16 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
             const SizedBox(height: 16),
             _buildSection('Parameter SAW', [
               _buildSlider('Tingkat Kepentingan', _kepentingan,
-                (v) => setState(() => _kepentingan = v.round()),
-                hint: 'Seberapa penting tugas ini?'),
+                  (v) => setState(() => _kepentingan = v.round()),
+                  hint: 'Seberapa penting tugas ini?'),
               const SizedBox(height: 12),
               _buildSlider('Tingkat Urgensi', _urgensi,
-                (v) => setState(() => _urgensi = v.round()),
-                hint: 'Seberapa mendesak tugas ini?'),
+                  (v) => setState(() => _urgensi = v.round()),
+                  hint: 'Seberapa mendesak tugas ini?'),
               const SizedBox(height: 12),
               _buildSlider('Estimasi Waktu (jam)', _estimasiWaktu,
-                (v) => setState(() => _estimasiWaktu = v.round()),
-                hint: 'Berapa jam yang dibutuhkan?', max: 10),
+                  (v) => setState(() => _estimasiWaktu = v.round()),
+                  hint: 'Berapa jam yang dibutuhkan?', max: 10),
             ]),
             const SizedBox(height: 16),
             _buildSection('Status', [_buildStatusSelector()]),
@@ -125,7 +126,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text(isEdit ? 'Simpan Perubahan' : 'Tambah Tugas',
-                  style: const TextStyle(fontSize: 16)),
+                    style: const TextStyle(fontSize: 16)),
               ),
             ),
             const SizedBox(height: 40),
@@ -147,9 +148,10 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-            style: const TextStyle(
-              fontSize: 14, fontWeight: FontWeight.w700,
-              color: AppTheme.primary)),
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.primary)),
           const Divider(height: 16),
           ...children,
         ],
@@ -157,8 +159,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController ctrl, String label,
-    IconData icon, {String? Function(String?)? validator}) {
+  Widget _buildTextField(
+      TextEditingController ctrl, String label, IconData icon,
+      {String? Function(String?)? validator}) {
     return TextFormField(
       controller: ctrl,
       validator: validator,
@@ -179,14 +182,19 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           lastDate: DateTime.now().add(const Duration(days: 365)),
         );
         if (date != null) {
+          if (!mounted) return;
           final time = await showTimePicker(
             context: context,
             initialTime: TimeOfDay.fromDateTime(_deadline),
           );
+          if (!mounted) return;
           setState(() {
             _deadline = DateTime(
-              date.year, date.month, date.day,
-              time?.hour ?? 23, time?.minute ?? 59,
+              date.year,
+              date.month,
+              date.day,
+              time?.hour ?? 23,
+              time?.minute ?? 59,
             );
           });
         }
@@ -206,13 +214,16 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Deadline', style: TextStyle(
-                  fontSize: 12, color: AppTheme.textSecondary)),
+                const Text('Deadline',
+                    style:
+                        TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
                 Text(
-                  DateFormat('EEEE, d MMMM yyyy - HH:mm', 'id_ID').format(_deadline),
-                  style: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
+                    DateFormat('EEEE, d MMMM yyyy - HH:mm', 'id_ID')
+                        .format(_deadline),
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary)),
               ],
             ),
             const Spacer(),
@@ -230,16 +241,29 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Kategori', style: TextStyle(
-                fontSize: 12, color: AppTheme.textSecondary)),
+              const Text('Kategori',
+                  style:
+                      TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
               DropdownButton<TaskCategory>(
                 value: _category,
                 isExpanded: true,
                 underline: const SizedBox(),
                 onChanged: (v) => setState(() => _category = v!),
                 items: TaskCategory.values.map((c) {
-                  final labels = ['Kuliah', 'Praktikum', 'Project', 'Lainnya'];
-                  return DropdownMenuItem(value: c, child: Text(labels[c.index]));
+                  return DropdownMenuItem(
+                    value: c,
+                    child: Row(
+                      children: [
+                        Image.asset(
+                          AppAssets.categoryIcon(c),
+                          width: 24,
+                          height: 24,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(AppAssets.categoryLabel(c)),
+                      ],
+                    ),
+                  );
                 }).toList(),
               ),
             ],
@@ -250,16 +274,19 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Grup', style: TextStyle(
-                fontSize: 12, color: AppTheme.textSecondary)),
+              const Text('Grup',
+                  style:
+                      TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
               DropdownButton<TaskGroup>(
                 value: _group,
                 isExpanded: true,
                 underline: const SizedBox(),
                 onChanged: (v) => setState(() => _group = v!),
                 items: const [
-                  DropdownMenuItem(value: TaskGroup.individu, child: Text('Individu')),
-                  DropdownMenuItem(value: TaskGroup.kelompok, child: Text('Kelompok')),
+                  DropdownMenuItem(
+                      value: TaskGroup.individu, child: Text('Individu')),
+                  DropdownMenuItem(
+                      value: TaskGroup.kelompok, child: Text('Kelompok')),
                 ],
               ),
             ],
@@ -270,9 +297,20 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   }
 
   Widget _buildSlider(String label, int value, ValueChanged<double> onChanged,
-    {String? hint, int max = 5}) {
-    final labels = ['', 'Sangat Rendah', 'Rendah', 'Sedang', 'Tinggi', 'Sangat Tinggi',
-      '6 jam', '7 jam', '8 jam', '9 jam', '10 jam'];
+      {String? hint, int max = 5}) {
+    final labels = [
+      '',
+      'Sangat Rendah',
+      'Rendah',
+      'Sedang',
+      'Tinggi',
+      'Sangat Tinggi',
+      '6 jam',
+      '7 jam',
+      '8 jam',
+      '9 jam',
+      '10 jam'
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,22 +318,29 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.1),
+                color: AppTheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(max == 5 ? labels[value] : '$value jam',
-                style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.primary)),
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primary)),
             ),
           ],
         ),
         if (hint != null)
-          Text(hint, style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
+          Text(hint,
+              style:
+                  const TextStyle(fontSize: 11, color: AppTheme.textSecondary)),
         Slider(
           value: value.toDouble(),
           min: 1,
@@ -312,8 +357,16 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     return Row(
       children: TaskStatus.values.map((s) {
         final labels = ['Belum\nDikerjakan', 'Sedang\nDikerjakan', 'Selesai'];
-        final icons = [Icons.radio_button_unchecked, Icons.access_time, Icons.check_circle];
-        final colors = [AppTheme.textSecondary, AppTheme.warning, AppTheme.success];
+        final icons = [
+          Icons.radio_button_unchecked,
+          Icons.access_time,
+          Icons.check_circle
+        ];
+        final colors = [
+          AppTheme.textSecondary,
+          AppTheme.warning,
+          AppTheme.success
+        ];
         final isSelected = _status == s;
         return Expanded(
           child: GestureDetector(
@@ -322,7 +375,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
               margin: const EdgeInsets.only(right: 6),
               padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
               decoration: BoxDecoration(
-                color: isSelected ? colors[s.index].withOpacity(0.1) : Colors.grey.shade50,
+                color: isSelected
+                    ? colors[s.index].withValues(alpha: 0.1)
+                    : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: isSelected ? colors[s.index] : AppTheme.border,
@@ -332,15 +387,20 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
               child: Column(
                 children: [
                   Icon(icons[s.index],
-                    color: isSelected ? colors[s.index] : AppTheme.textSecondary, size: 20),
+                      color:
+                          isSelected ? colors[s.index] : AppTheme.textSecondary,
+                      size: 20),
                   const SizedBox(height: 4),
                   Text(labels[s.index],
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.normal,
-                      color: isSelected ? colors[s.index] : AppTheme.textSecondary,
-                    )),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.normal,
+                        color: isSelected
+                            ? colors[s.index]
+                            : AppTheme.textSecondary,
+                      )),
                 ],
               ),
             ),
@@ -386,7 +446,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(isEdit ? 'Tugas berhasil diperbarui' : 'Tugas berhasil ditambahkan'),
+          content: Text(isEdit
+              ? 'Tugas berhasil diperbarui'
+              : 'Tugas berhasil ditambahkan'),
           backgroundColor: AppTheme.success,
         ),
       );
@@ -400,7 +462,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         title: const Text('Hapus Tugas'),
         content: const Text('Yakin ingin menghapus tugas ini?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(c), child: const Text('Batal')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () {

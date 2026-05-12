@@ -17,8 +17,10 @@ class SAWService {
     if (tasks.isEmpty) return tasks;
 
     // Filter hanya tugas yang belum selesai
-    final activeTasks = tasks.where((t) => t.status != TaskStatus.selesai).toList();
-    final doneTasks = tasks.where((t) => t.status == TaskStatus.selesai).toList();
+    final activeTasks =
+        tasks.where((t) => t.status != TaskStatus.selesai).toList();
+    final doneTasks =
+        tasks.where((t) => t.status == TaskStatus.selesai).toList();
 
     if (activeTasks.isEmpty) return tasks;
 
@@ -40,9 +42,9 @@ class SAWService {
     List<double> nilaiPreferensi = [];
     for (int i = 0; i < activeTasks.length; i++) {
       double vi = (matriksNormalisasi[i][0] * bobotKepentingan) +
-                  (matriksNormalisasi[i][1] * bobotUrgensi) +
-                  (matriksNormalisasi[i][2] * bobotDeadline) +
-                  (matriksNormalisasi[i][3] * bobotEstimasi);
+          (matriksNormalisasi[i][1] * bobotUrgensi) +
+          (matriksNormalisasi[i][2] * bobotDeadline) +
+          (matriksNormalisasi[i][3] * bobotEstimasi);
       nilaiPreferensi.add(vi);
     }
 
@@ -85,11 +87,12 @@ class SAWService {
   /// Normalisasi matriks keputusan
   static List<List<double>> _normalisasiMatriks(List<List<double>> matriks) {
     int jumlahKriteria = matriks[0].length;
-    List<List<double>> hasil = List.generate(
-      matriks.length, (_) => List.filled(jumlahKriteria, 0.0));
+    List<List<double>> hasil =
+        List.generate(matriks.length, (_) => List.filled(jumlahKriteria, 0.0));
 
     for (int j = 0; j < jumlahKriteria; j++) {
-      double maxVal = matriks.map((row) => row[j]).reduce((a, b) => a > b ? a : b);
+      double maxVal =
+          matriks.map((row) => row[j]).reduce((a, b) => a > b ? a : b);
       for (int i = 0; i < matriks.length; i++) {
         hasil[i][j] = maxVal == 0 ? 0 : matriks[i][j] / maxVal;
       }

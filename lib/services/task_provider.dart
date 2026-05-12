@@ -33,8 +33,7 @@ class TaskProvider with ChangeNotifier {
   List<Task> get completedTasks =>
       _tasks.where((t) => t.status == TaskStatus.selesai).toList();
 
-  List<Task> get overdueTasks =>
-      _tasks.where((t) => t.isOverdue).toList();
+  List<Task> get overdueTasks => _tasks.where((t) => t.isOverdue).toList();
 
   List<Task> get dueSoonTasks =>
       _tasks.where((t) => t.isDueSoon && !t.isOverdue).toList();
@@ -45,11 +44,15 @@ class TaskProvider with ChangeNotifier {
     return active;
   }
 
-  List<Task> get individuTasks =>
-      _tasks.where((t) => t.group == TaskGroup.individu && t.status != TaskStatus.selesai).toList();
+  List<Task> get individuTasks => _tasks
+      .where((t) =>
+          t.group == TaskGroup.individu && t.status != TaskStatus.selesai)
+      .toList();
 
-  List<Task> get kelompokTasks =>
-      _tasks.where((t) => t.group == TaskGroup.kelompok && t.status != TaskStatus.selesai).toList();
+  List<Task> get kelompokTasks => _tasks
+      .where((t) =>
+          t.group == TaskGroup.kelompok && t.status != TaskStatus.selesai)
+      .toList();
 
   int get totalTugas => _tasks.length;
   int get tugasSelesai => completedTasks.length;
@@ -196,7 +199,8 @@ class TaskProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> editTugas(String id, {
+  Future<void> editTugas(
+    String id, {
     String? namaTugas,
     String? mataKuliah,
     DateTime? deadline,

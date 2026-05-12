@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/task_provider.dart';
-import '../models/task_model.dart';
 import '../utils/app_theme.dart';
 import '../widgets/task_card_widget.dart';
 
@@ -29,17 +28,20 @@ class DashboardScreen extends StatelessWidget {
                       _buildStatCards(provider),
                       const SizedBox(height: 20),
                       if (provider.overdueTasks.isNotEmpty) ...[
-                        _buildSectionTitle('⚠️ Tugas Terlambat', AppTheme.danger),
+                        _buildSectionTitle(
+                            '⚠️ Tugas Terlambat', AppTheme.danger),
                         const SizedBox(height: 8),
                         ...provider.overdueTasks.take(2).map(
-                          (t) => TaskCardWidget(task: t, showRanking: false)),
+                            (t) => TaskCardWidget(task: t, showRanking: false)),
                         const SizedBox(height: 20),
                       ],
-                      _buildSectionTitle('📅 Deadline Terdekat', AppTheme.primary),
+                      _buildSectionTitle(
+                          '📅 Deadline Terdekat', AppTheme.primary),
                       const SizedBox(height: 8),
                       _buildDeadlineTasks(provider),
                       const SizedBox(height: 20),
-                      _buildSectionTitle('🏆 Prioritas Tertinggi', AppTheme.secondary),
+                      _buildSectionTitle(
+                          '🏆 Prioritas Tertinggi', AppTheme.secondary),
                       const SizedBox(height: 8),
                       _buildPriorityTasks(provider),
                       const SizedBox(height: 80),
@@ -56,8 +58,11 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildHeader(BuildContext context, TaskProvider provider) {
     final now = DateTime.now();
-    final greeting = now.hour < 12 ? 'Selamat Pagi' :
-                     now.hour < 17 ? 'Selamat Siang' : 'Selamat Malam';
+    final greeting = now.hour < 12
+        ? 'Selamat Pagi'
+        : now.hour < 17
+            ? 'Selamat Siang'
+            : 'Selamat Malam';
     return SliverAppBar(
       expandedHeight: 150,
       floating: false,
@@ -79,16 +84,17 @@ class DashboardScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('👋 $greeting!',
-                    style: const TextStyle(
-                      color: Colors.white70, fontSize: 14)),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 14)),
                   const Text('TugasKu',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                    )),
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                      )),
                   Text(DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(now),
-                    style: const TextStyle(color: Colors.white70, fontSize: 13)),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 13)),
                 ],
               ),
             ),
@@ -107,8 +113,8 @@ class DashboardScreen extends StatelessWidget {
         _statCard('Belum\nSelesai', provider.tugasAktif.toString(),
             AppTheme.warning, Icons.pending_actions_outlined),
         const SizedBox(width: 10),
-        _statCard('Selesai', provider.tugasSelesai.toString(),
-            AppTheme.success, Icons.check_circle_outline),
+        _statCard('Selesai', provider.tugasSelesai.toString(), AppTheme.success,
+            Icons.check_circle_outline),
         const SizedBox(width: 10),
         _statCard('Terlambat', provider.overdueTasks.length.toString(),
             AppTheme.danger, Icons.warning_amber_outlined),
@@ -121,9 +127,9 @@ class DashboardScreen extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -131,14 +137,15 @@ class DashboardScreen extends StatelessWidget {
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 6),
             Text(value,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: color,
-              )),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                )),
             Text(label,
-              style: const TextStyle(fontSize: 10, color: AppTheme.textSecondary),
-              maxLines: 2),
+                style: const TextStyle(
+                    fontSize: 10, color: AppTheme.textSecondary),
+                maxLines: 2),
           ],
         ),
       ),
@@ -148,16 +155,18 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildSectionTitle(String title, Color color) {
     return Row(
       children: [
-        Container(width: 4, height: 20,
-          decoration: BoxDecoration(
-            color: color, borderRadius: BorderRadius.circular(2))),
+        Container(
+            width: 4,
+            height: 20,
+            decoration: BoxDecoration(
+                color: color, borderRadius: BorderRadius.circular(2))),
         const SizedBox(width: 8),
         Text(title,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.textPrimary,
-          )),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            )),
       ],
     );
   }
@@ -171,8 +180,10 @@ class DashboardScreen extends StatelessWidget {
     }
 
     return Column(
-      children: tasks.take(3).map(
-        (t) => TaskCardWidget(task: t, showRanking: false)).toList(),
+      children: tasks
+          .take(3)
+          .map((t) => TaskCardWidget(task: t, showRanking: false))
+          .toList(),
     );
   }
 
@@ -182,8 +193,10 @@ class DashboardScreen extends StatelessWidget {
       return _buildEmptyState('Tidak ada tugas aktif 🎉');
     }
     return Column(
-      children: tasks.take(3).map(
-        (t) => TaskCardWidget(task: t, showRanking: true)).toList(),
+      children: tasks
+          .take(3)
+          .map((t) => TaskCardWidget(task: t, showRanking: true))
+          .toList(),
     );
   }
 
@@ -201,7 +214,8 @@ class DashboardScreen extends StatelessWidget {
           const Text('📭', style: TextStyle(fontSize: 40)),
           const SizedBox(height: 8),
           Text(message,
-            style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+              style:
+                  const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
         ],
       ),
     );

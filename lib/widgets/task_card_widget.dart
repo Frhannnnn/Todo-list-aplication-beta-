@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/task_model.dart';
+import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
 
 class TaskCardWidget extends StatelessWidget {
@@ -24,8 +25,8 @@ class TaskCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final prioritasColor = task.ranking > 0
-      ? AppTheme.getPrioritasColor(task.ranking, 10)
-      : AppTheme.textSecondary;
+        ? AppTheme.getPrioritasColor(task.ranking, 10)
+        : AppTheme.textSecondary;
 
     return GestureDetector(
       onTap: onTap,
@@ -35,14 +36,17 @@ class TaskCardWidget extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: task.isOverdue ? AppTheme.danger.withOpacity(0.5)
-              : task.isDueToday ? AppTheme.warning.withOpacity(0.5)
-              : AppTheme.border,
+            color: task.isOverdue
+                ? AppTheme.danger.withValues(alpha: 0.5)
+                : task.isDueToday
+                    ? AppTheme.warning.withValues(alpha: 0.5)
+                    : AppTheme.border,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 8, offset: const Offset(0, 2)),
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2)),
           ],
         ),
         child: Column(
@@ -54,10 +58,13 @@ class TaskCardWidget extends StatelessWidget {
                   Container(
                     width: 5,
                     decoration: BoxDecoration(
-                      color: task.isOverdue ? AppTheme.danger
-                        : task.isDueToday ? AppTheme.warning
-                        : task.isDueSoon ? AppTheme.warning.withOpacity(0.6)
-                        : AppTheme.success,
+                      color: task.isOverdue
+                          ? AppTheme.danger
+                          : task.isDueToday
+                              ? AppTheme.warning
+                              : task.isDueSoon
+                                  ? AppTheme.warning.withValues(alpha: 0.6)
+                                  : AppTheme.success,
                       borderRadius: const BorderRadius.only(
                         topLeft: Radius.circular(16),
                         bottomLeft: Radius.circular(16),
@@ -76,27 +83,33 @@ class TaskCardWidget extends StatelessWidget {
                               if (showRanking && task.ranking > 0) ...[
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
+                                      horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: prioritasColor.withOpacity(0.15),
+                                    color:
+                                        prioritasColor.withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text('#${task.ranking}',
-                                    style: TextStyle(
-                                      fontSize: 11, fontWeight: FontWeight.w800,
-                                      color: prioritasColor)),
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w800,
+                                          color: prioritasColor)),
                                 ),
                                 const SizedBox(width: 6),
                               ],
                               Expanded(
                                 child: Text(task.namaTugas,
-                                  style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w700,
-                                    color: AppTheme.textPrimary,
-                                    decoration: task.status == TaskStatus.selesai
-                                      ? TextDecoration.lineThrough : null,
-                                  ),
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textPrimary,
+                                      decoration:
+                                          task.status == TaskStatus.selesai
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis),
                               ),
                               _buildStatusBadge(),
                             ],
@@ -105,26 +118,41 @@ class TaskCardWidget extends StatelessWidget {
                           // Mata Kuliah
                           Row(
                             children: [
-                              const Icon(Icons.school, size: 12, color: AppTheme.textSecondary),
-                              const SizedBox(width: 4),
-                              Text(task.mataKuliah,
-                                style: const TextStyle(
-                                  fontSize: 12, color: AppTheme.textSecondary)),
+                              Image.asset(
+                                AppAssets.categoryIcon(task.category),
+                                width: 18,
+                                height: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(task.mataKuliah,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.textSecondary)),
+                              ),
                               const SizedBox(width: 8),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 6, vertical: 1),
                                 decoration: BoxDecoration(
                                   color: task.group == TaskGroup.individu
-                                    ? AppTheme.accent.withOpacity(0.1)
-                                    : AppTheme.secondary.withOpacity(0.1),
+                                      ? AppTheme.accent.withValues(alpha: 0.1)
+                                      : AppTheme.secondary
+                                          .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  task.group == TaskGroup.individu ? 'Individu' : 'Kelompok',
-                                  style: TextStyle(
-                                    fontSize: 10, fontWeight: FontWeight.w600,
-                                    color: task.group == TaskGroup.individu
-                                      ? AppTheme.accent : AppTheme.secondary)),
+                                    task.group == TaskGroup.individu
+                                        ? 'Individu'
+                                        : 'Kelompok',
+                                    style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: task.group == TaskGroup.individu
+                                            ? AppTheme.accent
+                                            : AppTheme.secondary)),
                               ),
                             ],
                           ),
@@ -132,25 +160,37 @@ class TaskCardWidget extends StatelessWidget {
                           // Deadline & info row
                           Row(
                             children: [
-                              Icon(Icons.calendar_today, size: 12,
-                                color: task.isOverdue ? AppTheme.danger : AppTheme.textSecondary),
+                              Icon(Icons.calendar_today,
+                                  size: 12,
+                                  color: task.isOverdue
+                                      ? AppTheme.danger
+                                      : AppTheme.textSecondary),
                               const SizedBox(width: 4),
                               Text(
-                                DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(task.deadline),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: task.isOverdue ? AppTheme.danger : AppTheme.textSecondary,
-                                  fontWeight: task.isOverdue ? FontWeight.w600 : FontWeight.normal,
-                                )),
+                                  DateFormat('d MMM yyyy, HH:mm', 'id_ID')
+                                      .format(task.deadline),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: task.isOverdue
+                                        ? AppTheme.danger
+                                        : AppTheme.textSecondary,
+                                    fontWeight: task.isOverdue
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                  )),
                               const Spacer(),
                               if (task.isOverdue)
-                                _buildDeadlineChip('Terlambat!', AppTheme.danger)
+                                _buildDeadlineChip(
+                                    'Terlambat!', AppTheme.danger)
                               else if (task.isDueToday)
-                                _buildDeadlineChip('Hari ini!', AppTheme.warning)
+                                _buildDeadlineChip(
+                                    'Hari ini!', AppTheme.warning)
                               else if (task.isDueSoon)
-                                _buildDeadlineChip('${task.sisaHari} hari lagi', AppTheme.warning)
+                                _buildDeadlineChip('${task.sisaHari} hari lagi',
+                                    AppTheme.warning)
                               else
-                                _buildDeadlineChip('${task.sisaHari} hari', AppTheme.success),
+                                _buildDeadlineChip(
+                                    '${task.sisaHari} hari', AppTheme.success),
                             ],
                           ),
                           if (onDelete != null || onStatusChange != null) ...[
@@ -175,11 +215,12 @@ class TaskCardWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(task.statusLabel,
-        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: color)),
+          style: TextStyle(
+              fontSize: 9, fontWeight: FontWeight.w700, color: color)),
     );
   }
 
@@ -187,12 +228,13 @@ class TaskCardWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(label,
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+          style: TextStyle(
+              fontSize: 10, fontWeight: FontWeight.w700, color: color)),
     );
   }
 
@@ -203,14 +245,15 @@ class TaskCardWidget extends StatelessWidget {
           if (task.status != TaskStatus.selesai) ...[
             InkWell(
               onTap: () => onStatusChange!(
-                task.status == TaskStatus.belumDikerjakan
-                  ? TaskStatus.sedangDikerjakan
-                  : TaskStatus.selesai),
+                  task.status == TaskStatus.belumDikerjakan
+                      ? TaskStatus.sedangDikerjakan
+                      : TaskStatus.selesai),
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppTheme.success.withOpacity(0.1),
+                  color: AppTheme.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Row(
@@ -218,11 +261,13 @@ class TaskCardWidget extends StatelessWidget {
                     const Icon(Icons.check, size: 12, color: AppTheme.success),
                     const SizedBox(width: 4),
                     Text(
-                      task.status == TaskStatus.belumDikerjakan
-                        ? 'Mulai' : 'Selesaikan',
-                      style: const TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w600,
-                        color: AppTheme.success)),
+                        task.status == TaskStatus.belumDikerjakan
+                            ? 'Mulai'
+                            : 'Selesaikan',
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.success)),
                   ],
                 ),
               ),
@@ -232,9 +277,10 @@ class TaskCardWidget extends StatelessWidget {
               onTap: () => onStatusChange!(TaskStatus.belumDikerjakan),
               borderRadius: BorderRadius.circular(6),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: AppTheme.warning.withOpacity(0.1),
+                  color: AppTheme.warning.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Row(
@@ -242,8 +288,10 @@ class TaskCardWidget extends StatelessWidget {
                     Icon(Icons.undo, size: 12, color: AppTheme.warning),
                     SizedBox(width: 4),
                     Text('Buka Lagi',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                        color: AppTheme.warning)),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.warning)),
                   ],
                 ),
               ),
@@ -257,7 +305,8 @@ class TaskCardWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             child: Container(
               padding: const EdgeInsets.all(5),
-              child: const Icon(Icons.delete_outline, size: 16, color: AppTheme.danger),
+              child: const Icon(Icons.delete_outline,
+                  size: 16, color: AppTheme.danger),
             ),
           ),
       ],

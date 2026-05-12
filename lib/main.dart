@@ -7,6 +7,7 @@ import 'services/task_provider.dart';
 import 'utils/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/task_list_screen.dart';
+import 'screens/calendar_screen.dart';
 import 'screens/priority_screen.dart';
 import 'screens/settings_screen.dart';
 
@@ -46,6 +47,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _screens = const [
     DashboardScreen(),
     TaskListScreen(),
+    CalendarScreen(),
     PriorityScreen(),
     SettingsScreen(),
   ];
@@ -53,15 +55,12 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 20,
               offset: const Offset(0, -4),
             ),
@@ -75,7 +74,9 @@ class _MainNavigationState extends State<MainNavigation> {
           unselectedItemColor: AppTheme.textSecondary,
           backgroundColor: Colors.white,
           selectedLabelStyle: const TextStyle(
-            fontWeight: FontWeight.w700, fontSize: 11),
+            fontWeight: FontWeight.w700,
+            fontSize: 11,
+          ),
           unselectedLabelStyle: const TextStyle(fontSize: 11),
           items: const [
             BottomNavigationBarItem(
@@ -87,6 +88,11 @@ class _MainNavigationState extends State<MainNavigation> {
               icon: Icon(Icons.assignment_outlined),
               activeIcon: Icon(Icons.assignment),
               label: 'Data Tugas',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month_outlined),
+              activeIcon: Icon(Icons.calendar_month),
+              label: 'Kalender',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.psychology_outlined),

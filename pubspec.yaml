@@ -27,4 +27,11 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/
+    - assets/images/logo.png
+    - assets/images/empty_tasks.png
+    - assets/images/empty_calendar.png
+    - assets/images/empty_priority.png
+    - assets/icons/category_kuliah.png
+    - assets/icons/category_praktikum.png
+    - assets/icons/category_project.png
+    - assets/icons/category_lainnya.png

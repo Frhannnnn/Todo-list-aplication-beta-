@@ -1,9 +1,9 @@
 // lib/models/task_model.dart
 
-import 'dart:convert';
-
 enum TaskStatus { belumDikerjakan, sedangDikerjakan, selesai }
+
 enum TaskGroup { individu, kelompok }
+
 enum TaskCategory { kuliah, praktikum, project, lainnya }
 
 class Task {
@@ -12,8 +12,8 @@ class Task {
   String mataKuliah;
   DateTime deadline;
   int tingkatKepentingan; // 1-5
-  int tingkatUrgensi;     // 1-5
-  int estimasiWaktu;      // dalam jam (1-10)
+  int tingkatUrgensi; // 1-5
+  int estimasiWaktu; // dalam jam (1-10)
   TaskStatus status;
   TaskGroup group;
   TaskCategory category;
@@ -47,7 +47,8 @@ class Task {
     return deadline.difference(now).inDays;
   }
 
-  bool get isOverdue => DateTime.now().isAfter(deadline) && status != TaskStatus.selesai;
+  bool get isOverdue =>
+      DateTime.now().isAfter(deadline) && status != TaskStatus.selesai;
   bool get isDueToday => sisaHari == 0 && !isOverdue;
   bool get isDueSoon => sisaHari <= 3 && sisaHari >= 0;
 

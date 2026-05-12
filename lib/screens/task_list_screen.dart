@@ -1,9 +1,9 @@
-// lib/screens/task_list_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/task_provider.dart';
+
 import '../models/task_model.dart';
+import '../services/task_provider.dart';
+import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
 import '../widgets/task_card_widget.dart';
 import 'add_edit_task_screen.dart';
@@ -19,7 +19,6 @@ class _TaskListScreenState extends State<TaskListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
-  TaskGroup? _filterGroup;
 
   @override
   void initState() {
@@ -38,7 +37,7 @@ class _TaskListScreenState extends State<TaskListScreen>
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('📋 Data Tugas'),
+        title: const Text('Data Tugas'),
         backgroundColor: AppTheme.primary,
         bottom: TabBar(
           controller: _tabController,
@@ -68,12 +67,16 @@ class _TaskListScreenState extends State<TaskListScreen>
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const AddEditTaskScreen())),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
+        ),
         backgroundColor: AppTheme.primary,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Tambah Tugas',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+        label: const Text(
+          'Tambah Tugas',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
       ),
     );
   }
@@ -87,12 +90,13 @@ class _TaskListScreenState extends State<TaskListScreen>
           hintText: 'Cari tugas...',
           prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
           suffixIcon: _searchQuery.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
-                onPressed: () => setState(() => _searchQuery = ''))
-            : null,
+              ? IconButton(
+                  icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
+                  onPressed: () => setState(() => _searchQuery = ''),
+                )
+              : null,
         ),
-        onChanged: (v) => setState(() => _searchQuery = v),
+        onChanged: (value) => setState(() => _searchQuery = value),
       ),
     );
   }
@@ -101,12 +105,11 @@ class _TaskListScreenState extends State<TaskListScreen>
     return Consumer<TaskProvider>(
       builder: (context, provider, _) {
         List<Task> tasks = group == null
-          ? provider.tasks
-          : group == TaskGroup.individu
-            ? provider.individuTasks
-            : provider.kelompokTasks;
+            ? provider.tasks
+            : group == TaskGroup.individu
+                ? provider.individuTasks
+                : provider.kelompokTasks;
 
-        // Filter tugas yang belum selesai dulu, lalu tambahkan yang selesai
         if (group == null) {
           final active = provider.activeTasks;
           final done = provider.completedTasks;
@@ -114,10 +117,14 @@ class _TaskListScreenState extends State<TaskListScreen>
         }
 
         if (_searchQuery.isNotEmpty) {
-          tasks = tasks.where((t) =>
-            t.namaTugas.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            t.mataKuliah.toLowerCase().contains(_searchQuery.toLowerCase())
-          ).toList();
+          final query = _searchQuery.toLowerCase();
+          tasks = tasks
+              .where(
+                (task) =>
+                    task.namaTugas.toLowerCase().contains(query) ||
+                    task.mataKuliah.toLowerCase().contains(query),
+              )
+              .toList();
         }
 
         if (tasks.isEmpty) {
@@ -132,10 +139,14 @@ class _TaskListScreenState extends State<TaskListScreen>
             return TaskCardWidget(
               task: task,
               showRanking: true,
-              onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => AddEditTaskScreen(task: task))),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => AddEditTaskScreen(task: task)),
+              ),
               onDelete: () => _confirmDelete(context, provider, task),
-              onStatusChange: (status) => provider.updateStatus(task.id, status),
+              onStatusChange: (status) =>
+                  provider.updateStatus(task.id, status),
             );
           },
         );
@@ -146,19 +157,25 @@ class _TaskListScreenState extends State<TaskListScreen>
   void _confirmDelete(BuildContext ctx, TaskProvider provider, Task task) {
     showDialog(
       context: ctx,
-      builder: (c) => AlertDialog(
+      builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Hapus Tugas'),
         content: Text('Hapus "${task.namaTugas}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
           ElevatedButton(
             onPressed: () {
               provider.hapusTugas(task.id);
-              Navigator.pop(c);
+              Navigator.pop(context);
               ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(content: Text('Tugas berhasil dihapus'),
-                  backgroundColor: AppTheme.danger));
+                const SnackBar(
+                  content: Text('Tugas berhasil dihapus'),
+                  backgroundColor: AppTheme.danger,
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             child: const Text('Hapus'),
@@ -173,14 +190,21 @@ class _TaskListScreenState extends State<TaskListScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('📭', style: TextStyle(fontSize: 60)),
+          Image.asset(AppAssets.emptyTasks, width: 180, height: 135),
           const SizedBox(height: 16),
-          const Text('Belum ada tugas',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600,
-              color: AppTheme.textPrimary)),
+          const Text(
+            'Belum ada tugas',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            ),
+          ),
           const SizedBox(height: 8),
-          const Text('Tap tombol + untuk menambah tugas baru',
-            style: TextStyle(color: AppTheme.textSecondary)),
+          const Text(
+            'Tap tombol + untuk menambah tugas baru',
+            style: TextStyle(color: AppTheme.textSecondary),
+          ),
         ],
       ),
     );

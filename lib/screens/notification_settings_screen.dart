@@ -81,8 +81,10 @@ class _NotificationSettingsScreenState
               Icon(Icons.notifications_active, color: Colors.white, size: 24),
               SizedBox(width: 10),
               Text('Izin Notifikasi',
-                style: TextStyle(color: Colors.white,
-                  fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 8),
@@ -98,19 +100,20 @@ class _NotificationSettingsScreenState
                 backgroundColor: Colors.white,
                 foregroundColor: AppTheme.primary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
+                    borderRadius: BorderRadius.circular(10)),
               ),
               icon: const Icon(Icons.check_circle_outline, size: 18),
               label: const Text('Berikan Izin Notifikasi',
-                style: TextStyle(fontWeight: FontWeight.w700)),
+                  style: TextStyle(fontWeight: FontWeight.w700)),
               onPressed: () async {
                 final granted = await provider.requestNotificationPermission();
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(granted
-                      ? '✅ Izin diberikan!'
-                      : '❌ Izin ditolak. Aktifkan di Pengaturan HP.'),
-                    backgroundColor: granted ? AppTheme.success : AppTheme.danger,
+                        ? '✅ Izin diberikan!'
+                        : '❌ Izin ditolak. Aktifkan di Pengaturan HP.'),
+                    backgroundColor:
+                        granted ? AppTheme.success : AppTheme.danger,
                   ));
                 }
               },
@@ -131,13 +134,15 @@ class _NotificationSettingsScreenState
             await provider.setNotifEnabled(v);
             await _loadPendingCount();
           },
-          activeColor: AppTheme.primary,
+          activeThumbColor: AppTheme.primary,
           title: const Text('Aktifkan Notifikasi',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-          subtitle: Text(provider.notifEnabled
-            ? 'Notifikasi deadline aktif'
-            : 'Semua notifikasi dimatikan',
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          subtitle: Text(
+              provider.notifEnabled
+                  ? 'Notifikasi deadline aktif'
+                  : 'Semua notifikasi dimatikan',
+              style:
+                  const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
           contentPadding: EdgeInsets.zero,
         ),
       ],
@@ -188,14 +193,15 @@ class _NotificationSettingsScreenState
           );
           await _loadPendingCount();
         },
-        activeColor: AppTheme.primary,
+        activeThumbColor: AppTheme.primary,
         title: const Text('Pengingat Pagi',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         subtitle: Text(
-          provider.dailyReminderEnabled
-            ? 'Aktif setiap hari pukul ${provider.dailyReminderHour.toString().padLeft(2, '0')}:${provider.dailyReminderMinute.toString().padLeft(2, '0')}'
-            : 'Pengingat harian dimatikan',
-          style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+            provider.dailyReminderEnabled
+                ? 'Aktif setiap hari pukul ${provider.dailyReminderHour.toString().padLeft(2, '0')}:${provider.dailyReminderMinute.toString().padLeft(2, '0')}'
+                : 'Pengingat harian dimatikan',
+            style:
+                const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
         contentPadding: EdgeInsets.zero,
       ),
       if (provider.dailyReminderEnabled) ...[
@@ -206,24 +212,28 @@ class _NotificationSettingsScreenState
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.05),
+              color: AppTheme.primary.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppTheme.primary.withOpacity(0.3)),
+              border:
+                  Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.access_time, color: AppTheme.primary, size: 20),
+                const Icon(Icons.access_time,
+                    color: AppTheme.primary, size: 20),
                 const SizedBox(width: 10),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text('Waktu Pengingat',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                        style: TextStyle(
+                            fontSize: 12, color: AppTheme.textSecondary)),
                     Text(
-                      '${provider.dailyReminderHour.toString().padLeft(2, '0')}:${provider.dailyReminderMinute.toString().padLeft(2, '0')}',
-                      style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w800,
-                        color: AppTheme.primary)),
+                        '${provider.dailyReminderHour.toString().padLeft(2, '0')}:${provider.dailyReminderMinute.toString().padLeft(2, '0')}',
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.primary)),
                   ],
                 ),
                 const Spacer(),
@@ -267,21 +277,24 @@ class _NotificationSettingsScreenState
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.schedule, color: AppTheme.primary, size: 24),
+            child:
+                const Icon(Icons.schedule, color: AppTheme.primary, size: 24),
           ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('$_pendingCount notifikasi terjadwal',
-                style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary)),
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary)),
               const Text('menunggu untuk dikirim',
-                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+                  style:
+                      TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
             ],
           ),
           const Spacer(),
@@ -298,7 +311,8 @@ class _NotificationSettingsScreenState
     return _buildCard('ℹ️ Cara Kerja Notifikasi', [
       const Text(
         'Notifikasi dijadwalkan secara otomatis saat kamu menambah atau mengedit tugas. Notifikasi akan dikirim berdasarkan deadline yang kamu set.',
-        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.5),
+        style:
+            TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.5),
       ),
       const SizedBox(height: 10),
       _buildTip('💡', 'Notifikasi tetap berfungsi saat aplikasi ditutup'),
@@ -315,8 +329,9 @@ class _NotificationSettingsScreenState
           Text(emoji, style: const TextStyle(fontSize: 14)),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(text,
-              style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary))),
+              child: Text(text,
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textSecondary))),
         ],
       ),
     );
@@ -333,8 +348,11 @@ class _NotificationSettingsScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(
-            fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary)),
           const Divider(height: 16),
           ...children,
         ],
@@ -353,7 +371,7 @@ class _NotificationSettingsScreenState
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: iconColor, size: 18),
@@ -362,10 +380,14 @@ class _NotificationSettingsScreenState
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(
-              fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-            Text(subtitle, style: const TextStyle(
-              fontSize: 11, color: AppTheme.textSecondary)),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary)),
+            Text(subtitle,
+                style: const TextStyle(
+                    fontSize: 11, color: AppTheme.textSecondary)),
           ],
         ),
         const Spacer(),

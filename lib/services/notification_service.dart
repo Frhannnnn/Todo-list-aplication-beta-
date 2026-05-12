@@ -12,7 +12,7 @@ class NotificationService {
   NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin _plugin =
-  FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
 
@@ -34,7 +34,7 @@ class NotificationService {
     }
 
     const androidSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
@@ -84,8 +84,7 @@ class NotificationService {
       enableVibration: true,
     );
 
-    final androidPlugin =
-    _plugin.resolvePlatformSpecificImplementation<
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(deadline);
     await androidPlugin?.createNotificationChannel(reminder);
@@ -130,7 +129,8 @@ class NotificationService {
         await _scheduleNotification(
           id: _taskNotifId(task.id, 1),
           title: '📅 Deadline 3 Hari Lagi',
-          body: '"${task.namaTugas}" (${task.mataKuliah}) deadline dalam 3 hari.',
+          body:
+              '"${task.namaTugas}" (${task.mataKuliah}) deadline dalam 3 hari.',
           scheduledTime: notifTime,
           channelId: _channelIdReminder,
           payload: task.id,
@@ -183,15 +183,15 @@ class NotificationService {
       _taskNotifId(task.id, 0),
       '❌ Tugas Terlambat!',
       '"${task.namaTugas}" sudah melewati deadline. Segera hubungi dosen!',
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelIdOverdue,
           'Tugas Terlambat',
           importance: Importance.max,
           priority: Priority.high,
-          color: const Color(0xFFEF4444),
+          color: Color(0xFFEF4444),
         ),
-        iOS: const DarwinNotificationDetails(
+        iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -227,8 +227,8 @@ class NotificationService {
     if (activeTasks == 0) return;
 
     final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
-        tz.local, now.year, now.month, now.day, hour, minute);
+    var scheduledDate =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
 
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
@@ -239,17 +239,19 @@ class NotificationService {
       '📚 Selamat Pagi, Mahasiswa!',
       'Kamu punya $activeTasks tugas yang belum selesai. Yuk cek TugasKu!',
       scheduledDate,
-      NotificationDetails(
+      const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelIdReminder,
           'Pengingat Tugas',
           importance: Importance.defaultImportance,
-          styleInformation: const BigTextStyleInformation(''),
+          styleInformation: BigTextStyleInformation(''),
         ),
-        iOS: const DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime, // Diperbaiki di sini
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation
+              .absoluteTime, // Diperbaiki di sini
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -283,11 +285,10 @@ class NotificationService {
           channelId == _channelIdDeadline
               ? 'Deadline Tugas'
               : channelId == _channelIdOverdue
-              ? 'Tugas Terlambat'
-              : 'Pengingat Tugas',
-          importance: channelId == _channelIdOverdue
-              ? Importance.max
-              : Importance.high,
+                  ? 'Tugas Terlambat'
+                  : 'Pengingat Tugas',
+          importance:
+              channelId == _channelIdOverdue ? Importance.max : Importance.high,
           priority: Priority.high,
           color: channelId == _channelIdOverdue
               ? const Color(0xFFEF4444)
@@ -302,7 +303,9 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: payload,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime, // Diperbaiki di sini
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation
+              .absoluteTime, // Diperbaiki di sini
     );
   }
 

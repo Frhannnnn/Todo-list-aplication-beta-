@@ -56,13 +56,16 @@ class SettingsScreen extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('TugasKu', style: TextStyle(
-                fontSize: 22, fontWeight: FontWeight.w800, color: Colors.white)),
+              Text('TugasKu',
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white)),
               Text('Aplikasi Manajemen Tugas Mahasiswa',
-                style: TextStyle(color: Colors.white70, fontSize: 12)),
+                  style: TextStyle(color: Colors.white70, fontSize: 12)),
               SizedBox(height: 4),
-              Text('Versi 1.0.0', style: TextStyle(
-                color: Colors.white60, fontSize: 11)),
+              Text('Versi 1.0.0',
+                  style: TextStyle(color: Colors.white60, fontSize: 11)),
             ],
           ),
         ],
@@ -79,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
           _buildStatRow('Tugas Selesai', '${provider.tugasSelesai}'),
           _buildStatRow('Tugas Terlambat', '${provider.overdueTasks.length}'),
           _buildStatRow('Persentase Selesai',
-            '${provider.persentaseSelesai.toStringAsFixed(1)}%'),
+              '${provider.persentaseSelesai.toStringAsFixed(1)}%'),
         ]);
       },
     );
@@ -93,19 +96,26 @@ class SettingsScreen extends StatelessWidget {
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.1),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.notifications_active, color: AppTheme.primary, size: 22),
+            child: const Icon(Icons.notifications_active,
+                color: AppTheme.primary, size: 22),
           ),
           title: const Text('Pengaturan Notifikasi',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           subtitle: Text(
-            provider.notifEnabled ? '✅ Notifikasi aktif' : '🔕 Notifikasi dimatikan',
-            style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
-          trailing: const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
-          onTap: () => Navigator.push(ctx,
-            MaterialPageRoute(builder: (_) => const NotificationSettingsScreen())),
+              provider.notifEnabled
+                  ? '✅ Notifikasi aktif'
+                  : '🔕 Notifikasi dimatikan',
+              style:
+                  const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
+          trailing:
+              const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+          onTap: () => Navigator.push(
+              ctx,
+              MaterialPageRoute(
+                  builder: (_) => const NotificationSettingsScreen())),
         ),
       ]);
     });
@@ -115,11 +125,15 @@ class SettingsScreen extends StatelessWidget {
     return _buildCard('🧠 Tentang Metode SAW', [
       const Text(
         'Simple Additive Weighting (SAW) adalah metode pengambilan keputusan multi-kriteria yang menghitung nilai bobot untuk setiap kriteria, lalu menjumlahkan semua nilai terbobot untuk mendapatkan nilai preferensi akhir.',
-        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.5),
+        style:
+            TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.5),
       ),
       const SizedBox(height: 12),
-      const Text('Bobot yang digunakan:', style: TextStyle(
-        fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+      const Text('Bobot yang digunakan:',
+          style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary)),
       const SizedBox(height: 6),
       _buildKriteriaRow('Tingkat Urgensi', '35%', AppTheme.danger),
       _buildKriteriaRow('Tingkat Kepentingan', '30%', AppTheme.warning),
@@ -136,8 +150,8 @@ class SettingsScreen extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.danger,
             side: const BorderSide(color: AppTheme.danger),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           icon: const Icon(Icons.delete_forever),
           label: const Text('Hapus Semua Tugas'),
@@ -158,8 +172,11 @@ class SettingsScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(
-            fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+          Text(title,
+              style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary)),
           const Divider(height: 16),
           ...children,
         ],
@@ -173,10 +190,14 @@ class SettingsScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(
-            fontSize: 13, color: AppTheme.textSecondary)),
-          Text(value, style: const TextStyle(
-            fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary)),
+          Text(label,
+              style:
+                  const TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary)),
         ],
       ),
     );
@@ -187,11 +208,18 @@ class SettingsScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          Container(width: 10, height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 8),
-          Expanded(child: Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary))),
-          Text(bobot, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+          Expanded(
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 12, color: AppTheme.textSecondary))),
+          Text(bobot,
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: color)),
         ],
       ),
     );
@@ -202,16 +230,18 @@ class SettingsScreen extends StatelessWidget {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Hapus Semua Tugas'),
-        content: const Text('Semua data tugas akan dihapus permanen. Lanjutkan?'),
+        content:
+            const Text('Semua data tugas akan dihapus permanen. Lanjutkan?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(c), child: const Text('Batal')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () {
               context.read<TaskProvider>().clearAllTasks();
               Navigator.pop(c);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Semua tugas telah dihapus'),
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Semua tugas telah dihapus'),
                   backgroundColor: AppTheme.danger));
             },
             child: const Text('Hapus Semua'),
