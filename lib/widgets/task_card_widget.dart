@@ -9,6 +9,7 @@ import '../utils/app_theme.dart';
 class TaskCardWidget extends StatelessWidget {
   final Task task;
   final bool showRanking;
+  final int totalActiveTasks;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
   final Function(TaskStatus)? onStatusChange;
@@ -17,10 +18,16 @@ class TaskCardWidget extends StatelessWidget {
     super.key,
     required this.task,
     this.showRanking = false,
+    this.totalActiveTasks = 0,
     this.onTap,
     this.onDelete,
     this.onStatusChange,
   });
+
+  bool get _shouldShowPriorityBadge =>
+      task.ranking > 0 &&
+      task.status != TaskStatus.selesai &&
+      totalActiveTasks > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +102,10 @@ class TaskCardWidget extends StatelessWidget {
                                           fontWeight: FontWeight.w800,
                                           color: prioritasColor)),
                                 ),
+                                const SizedBox(width: 4),
+                              ],
+                              if (_shouldShowPriorityBadge) ...[
+                                _buildPriorityBadge(),
                                 const SizedBox(width: 6),
                               ],
                               Expanded(
@@ -205,6 +216,27 @@ class TaskCardWidget extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriorityBadge() {
+    final label = AppTheme.getPrioritasLabel(task.ranking, totalActiveTasks);
+    final color = AppTheme.getPrioritasColor(task.ranking, totalActiveTasks);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          color: color,
         ),
       ),
     );

@@ -95,13 +95,11 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
             ]),
             const SizedBox(height: 16),
             _buildSection('Parameter SAW', [
-              _buildSlider('Tingkat Kepentingan', _kepentingan,
-                  (v) => setState(() => _kepentingan = v.round()),
-                  hint: 'Seberapa penting tugas ini?'),
+              _buildKepentinganSlider(),
               const SizedBox(height: 12),
-              _buildSlider('Tingkat Urgensi', _urgensi,
-                  (v) => setState(() => _urgensi = v.round()),
-                  hint: 'Seberapa mendesak tugas ini?'),
+              _buildUrgensiSlider(),
+              const SizedBox(height: 12),
+              _buildEisenhowerSummary(),
               const SizedBox(height: 12),
               _buildSlider('Estimasi Waktu (jam)', _estimasiWaktu,
                   (v) => setState(() => _estimasiWaktu = v.round()),
@@ -350,6 +348,207 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           onChanged: onChanged,
         ),
       ],
+    );
+  }
+
+  /// Slider kepentingan dengan deskripsi, contoh penting vs mendesak, dan info icon.
+  Widget _buildKepentinganSlider() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Tingkat Kepentingan',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () => showDialog(
+                context: context,
+                builder: (c) => AlertDialog(
+                  title: const Text('Tingkat Kepentingan'),
+                  content: const Text(
+                    'Kepentingan = seberapa besar dampak tugas ini terhadap nilai atau tujuan akademikmu. '
+                    'Contoh: tugas UAS lebih penting dari tugas mingguan biasa.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(c),
+                      child: const Text('Mengerti'),
+                    ),
+                  ],
+                ),
+              ),
+              child: const Icon(
+                Icons.info_outline,
+                size: 16,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                AppTheme.getLabelSlider(_kepentingan),
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primary),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Dampak jangka panjang terhadap tujuan akademik',
+          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+        ),
+        Slider(
+          value: _kepentingan.toDouble(),
+          min: 1,
+          max: 5,
+          divisions: 4,
+          activeColor: AppTheme.primary,
+          onChanged: (v) => setState(() => _kepentingan = v.round()),
+        ),
+        const Text(
+          '💡 Penting ≠ Mendesak: penting = berdampak besar pada nilai/tujuan; mendesak = deadline dekat',
+          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+        ),
+      ],
+    );
+  }
+
+  /// Slider urgensi dengan deskripsi dan info icon.
+  Widget _buildUrgensiSlider() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Text(
+              'Tingkat Urgensi',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textPrimary),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () => showDialog(
+                context: context,
+                builder: (c) => AlertDialog(
+                  title: const Text('Tingkat Urgensi'),
+                  content: const Text(
+                    'Urgensi = seberapa mendesak tugas ini harus dikerjakan sekarang. '
+                    'Contoh: tugas dengan deadline besok lebih mendesak dari tugas dengan deadline 2 minggu lagi.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(c),
+                      child: const Text('Mengerti'),
+                    ),
+                  ],
+                ),
+              ),
+              child: const Icon(
+                Icons.info_outline,
+                size: 16,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                AppTheme.getLabelSlider(_urgensi),
+                style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.primary),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text(
+          'Seberapa mendesak berdasarkan kedekatan deadline',
+          style: TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+        ),
+        Slider(
+          value: _urgensi.toDouble(),
+          min: 1,
+          max: 5,
+          divisions: 4,
+          activeColor: AppTheme.primary,
+          onChanged: (v) => setState(() => _urgensi = v.round()),
+        ),
+      ],
+    );
+  }
+
+  /// Mengembalikan warna latar sesuai kuadran Eisenhower.
+  Color _getEisenhowerColor(String label) {
+    if (label.contains('Kerjakan Sekarang')) {
+      return const Color(0xFFEF4444); // merah — penting & mendesak
+    } else if (label.contains('Jadwalkan')) {
+      return const Color(0xFF2563EB); // biru — penting, tidak mendesak
+    } else if (label.contains('Delegasikan')) {
+      return const Color(0xFFF59E0B); // kuning/amber — mendesak, kurang penting
+    } else {
+      return const Color(0xFF94A3B8); // abu-abu — kurang penting & tidak mendesak
+    }
+  }
+
+  /// Widget ringkasan kuadran Eisenhower berdasarkan nilai _kepentingan dan _urgensi saat ini.
+  /// Diperbarui secara reaktif karena dibaca dari state yang diubah via setState.
+  Widget _buildEisenhowerSummary() {
+    final label = AppTheme.getEisenhowerLabel(_kepentingan, _urgensi);
+    final color = _getEisenhowerColor(label);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '📊 $label',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: color.withValues(alpha: 0.9),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

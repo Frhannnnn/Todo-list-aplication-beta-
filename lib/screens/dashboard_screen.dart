@@ -32,7 +32,7 @@ class DashboardScreen extends StatelessWidget {
                             '⚠️ Tugas Terlambat', AppTheme.danger),
                         const SizedBox(height: 8),
                         ...provider.overdueTasks.take(2).map(
-                            (t) => TaskCardWidget(task: t, showRanking: false)),
+                            (t) => TaskCardWidget(task: t, showRanking: false, totalActiveTasks: provider.activeTasks.length)),
                         const SizedBox(height: 20),
                       ],
                       _buildSectionTitle(
@@ -182,7 +182,7 @@ class DashboardScreen extends StatelessWidget {
     return Column(
       children: tasks
           .take(3)
-          .map((t) => TaskCardWidget(task: t, showRanking: false))
+          .map((t) => TaskCardWidget(task: t, showRanking: false, totalActiveTasks: provider.activeTasks.length))
           .toList(),
     );
   }
@@ -195,7 +195,7 @@ class DashboardScreen extends StatelessWidget {
     return Column(
       children: tasks
           .take(3)
-          .map((t) => TaskCardWidget(task: t, showRanking: true))
+          .map((t) => TaskCardWidget(task: t, showRanking: true, totalActiveTasks: provider.activeTasks.length))
           .toList(),
     );
   }

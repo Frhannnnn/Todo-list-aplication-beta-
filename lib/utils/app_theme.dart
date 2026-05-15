@@ -91,6 +91,30 @@ class AppTheme {
     );
   }
 
+  /// Mengembalikan label deskriptif untuk nilai slider kepentingan/urgensi (1–5).
+  /// Nilai di luar rentang mengembalikan '-'.
+  static String getLabelSlider(int value) {
+    const labels = {
+      1: 'Sangat Rendah',
+      2: 'Rendah',
+      3: 'Sedang',
+      4: 'Tinggi',
+      5: 'Sangat Tinggi',
+    };
+    return labels[value] ?? '-';
+  }
+
+  /// Mengembalikan label kuadran Eisenhower berdasarkan kombinasi kepentingan & urgensi.
+  /// Threshold: nilai >= 4 dianggap "tinggi".
+  static String getEisenhowerLabel(int kepentingan, int urgensi) {
+    final isImportant = kepentingan >= 4;
+    final isUrgent = urgensi >= 4;
+    if (isImportant && isUrgent) return 'Penting & Mendesak → Kerjakan Sekarang';
+    if (isImportant && !isUrgent) return 'Penting, Tidak Mendesak → Jadwalkan';
+    if (!isImportant && isUrgent) return 'Mendesak, Kurang Penting → Delegasikan';
+    return 'Kurang Penting & Tidak Mendesak → Eliminasi';
+  }
+
   static Color getPrioritasColor(int ranking, int total) {
     if (total == 0) return Colors.grey;
     double pct = ranking / total;

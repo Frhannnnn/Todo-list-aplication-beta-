@@ -47,6 +47,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           return TaskCardWidget(
                             task: task,
                             showRanking: true,
+                            totalActiveTasks: provider.activeTasks.length,
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(

@@ -31,7 +31,7 @@ class PriorityScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
             children: [
-              _buildIntroCard(activeTasks.length),
+              _buildIntroCard(activeTasks.length, groupedTasks),
               const SizedBox(height: 14),
               LayoutBuilder(
                 builder: (context, constraints) {
@@ -46,15 +46,14 @@ class PriorityScreen extends StatelessWidget {
                       .toList();
 
                   if (!isWide) {
-                    return Column(
-                      children: cards
-                          .map(
-                            (card) => Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: card,
-                            ),
-                          )
-                          .toList(),
+                    return GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 0.72,
+                      children: cards,
                     );
                   }
 
@@ -106,7 +105,7 @@ class PriorityScreen extends StatelessWidget {
     return EisenhowerQuadrant.eliminate;
   }
 
-  Widget _buildIntroCard(int activeCount) {
+  Widget _buildIntroCard(int activeCount, Map<EisenhowerQuadrant, List<Task>> grouped) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -114,47 +113,82 @@ class PriorityScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.border),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppTheme.secondary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.grid_view_rounded,
-              color: AppTheme.secondary,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppTheme.secondary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.grid_view_rounded,
+                  color: AppTheme.secondary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Pembagian prioritas 4 kuadran',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '$activeCount tugas aktif dikelompokkan dari tingkat kepentingan dan urgensi.',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Pembagian prioritas 4 kuadran',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  '$activeCount tugas aktif dikelompokkan dari tingkat kepentingan dan urgensi.',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: EisenhowerQuadrant.values.map((q) {
+              final count = grouped[q]?.length ?? 0;
+              final config = _configFor(q);
+              return _buildDistribItem(config.title, count, config.color);
+            }).toList(),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDistribItem(String label, int count, Color color) {
+    return Column(
+      children: [
+        Text(
+          '$count',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10,
+            color: AppTheme.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 
@@ -259,17 +293,17 @@ class _QuadrantCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
             child: Row(
               children: [
                 Container(
-                  width: 38,
-                  height: 38,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: config.color.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(config.icon, color: config.color, size: 21),
+                  child: Icon(config.icon, color: config.color, size: 18),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -279,7 +313,7 @@ class _QuadrantCard extends StatelessWidget {
                       Text(
                         config.title,
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.textPrimary,
                         ),
@@ -287,7 +321,7 @@ class _QuadrantCard extends StatelessWidget {
                       Text(
                         config.subtitle,
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           color: AppTheme.textSecondary,
                         ),
                       ),
@@ -318,8 +352,7 @@ class _QuadrantCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            height: 210,
+          Expanded(
             child: tasks.isEmpty
                 ? _emptyQuadrant()
                 : ListView.separated(

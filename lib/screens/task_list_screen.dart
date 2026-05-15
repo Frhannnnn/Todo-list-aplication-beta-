@@ -19,6 +19,8 @@ class _TaskListScreenState extends State<TaskListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
+  String _filterPrioritas = 'Semua'; // nilai valid: 'Semua', 'Tinggi', 'Sedang', 'Rendah'
+  String _sortMode = 'Default'; // nilai valid: 'Default', 'Prioritas Tertinggi'
 
   @override
   void initState() {
@@ -54,6 +56,7 @@ class _TaskListScreenState extends State<TaskListScreen>
       body: Column(
         children: [
           _buildSearchBar(),
+          _buildFilterSortBar(),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -101,6 +104,169 @@ class _TaskListScreenState extends State<TaskListScreen>
     );
   }
 
+  List<Task> _applyFilterAndSort(List<Task> tasks, int totalActive) {
+    // 1. Filter pencarian teks
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      tasks = tasks
+          .where(
+            (t) =>
+                t.namaTugas.toLowerCase().contains(q) ||
+                t.mataKuliah.toLowerCase().contains(q),
+          )
+          .toList();
+    }
+
+    // 2. Filter prioritas
+    if (_filterPrioritas != 'Semua') {
+      tasks = tasks.where((t) {
+        if (t.ranking == 0 || t.status == TaskStatus.selesai) return false;
+        return AppTheme.getPrioritasLabel(t.ranking, totalActive) ==
+            _filterPrioritas;
+      }).toList();
+    }
+
+    // 3. Sort
+    if (_sortMode == 'Prioritas Tertinggi') {
+      tasks.sort((a, b) {
+        if (a.ranking == 0 && b.ranking == 0) return 0;
+        if (a.ranking == 0) return 1; // ranking 0 ke bawah
+        if (b.ranking == 0) return -1;
+        return a.ranking.compareTo(b.ranking);
+      });
+    }
+
+    return tasks;
+  }
+
+  Widget _buildFilterSortBar() {
+    const filterOptions = ['Semua', 'Tinggi', 'Sedang', 'Rendah'];
+    const sortOptions = ['Default', 'Prioritas Tertinggi'];
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Baris filter prioritas
+          Row(
+            children: [
+              const Text(
+                'Filter:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: filterOptions.map((label) {
+                      final isSelected = _filterPrioritas == label;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: FilterChip(
+                          label: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppTheme.textPrimary,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onSelected: (_) =>
+                              setState(() => _filterPrioritas = label),
+                          selectedColor: AppTheme.primary,
+                          backgroundColor: AppTheme.background,
+                          checkmarkColor: Colors.white,
+                          showCheckmark: false,
+                          side: BorderSide(
+                            color: isSelected
+                                ? AppTheme.primary
+                                : AppTheme.border,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 0),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          // Baris sort
+          Row(
+            children: [
+              const Text(
+                'Urutkan:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: sortOptions.map((label) {
+                      final isSelected = _sortMode == label;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 6),
+                        child: FilterChip(
+                          label: Text(
+                            label,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isSelected
+                                  ? Colors.white
+                                  : AppTheme.textPrimary,
+                            ),
+                          ),
+                          selected: isSelected,
+                          onSelected: (_) =>
+                              setState(() => _sortMode = label),
+                          selectedColor: AppTheme.primary,
+                          backgroundColor: AppTheme.background,
+                          checkmarkColor: Colors.white,
+                          showCheckmark: false,
+                          side: BorderSide(
+                            color: isSelected
+                                ? AppTheme.primary
+                                : AppTheme.border,
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 0),
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildTaskList(TaskGroup? group) {
     return Consumer<TaskProvider>(
       builder: (context, provider, _) {
@@ -116,15 +282,11 @@ class _TaskListScreenState extends State<TaskListScreen>
           tasks = [...active, ...done];
         }
 
-        if (_searchQuery.isNotEmpty) {
-          final query = _searchQuery.toLowerCase();
-          tasks = tasks
-              .where(
-                (task) =>
-                    task.namaTugas.toLowerCase().contains(query) ||
-                    task.mataKuliah.toLowerCase().contains(query),
-              )
-              .toList();
+        final totalActiveTasks = provider.activeTasks.length;
+        tasks = _applyFilterAndSort(tasks, totalActiveTasks);
+
+        if (tasks.isEmpty && _filterPrioritas != 'Semua') {
+          return _buildEmptyFilterState(_filterPrioritas);
         }
 
         if (tasks.isEmpty) {
@@ -139,6 +301,7 @@ class _TaskListScreenState extends State<TaskListScreen>
             return TaskCardWidget(
               task: task,
               showRanking: true,
+              totalActiveTasks: totalActiveTasks,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -179,6 +342,23 @@ class _TaskListScreenState extends State<TaskListScreen>
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyFilterState(String label) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.filter_list_off, size: 64, color: AppTheme.textSecondary),
+          const SizedBox(height: 16),
+          Text(
+            'Tidak ada tugas dengan prioritas $label saat ini.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppTheme.textSecondary),
           ),
         ],
       ),
