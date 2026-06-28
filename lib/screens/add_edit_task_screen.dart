@@ -29,6 +29,10 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   TaskStatus _status = TaskStatus.belumDikerjakan;
   bool _notifEnabled = true;
   List<String> _notifSchedule = ['h-1', '3jam', 'deadline'];
+  
+  // Bug #3 Fix: State variables for loading (moved inside class)
+  bool _isAddingScope = false;
+  bool _isAddingCategory = false;
 
   bool get isEdit => widget.task != null;
 
@@ -252,15 +256,15 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
-  // Bug #3 Fix: Add state variables for loading and error handling
-bool _isAddingScope = false;
-
+  // Bug #3 Fix: Simplified version dengan barrierDismissible: false
   Future<void> _showAddScopeDialog(TaskProvider provider) async {
+    if (_isAddingScope) return; // Prevent double-tap
+    
     final ctrl = TextEditingController();
-    final dialogContext = context;
     
     await showDialog(
-      context: dialogContext,
+      context: context,
+      barrierDismissible: false, // Prevent dismiss while loading
       builder: (c) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Tambah Lingkup Tugas'),
@@ -281,7 +285,8 @@ bool _isAddingScope = false;
                   : () async {
                       if (ctrl.text.trim().isEmpty) return;
                       
-                      setDialogState(() => _isAddingScope = true);
+                      setState(() => _isAddingScope = true);
+                      setDialogState(() {});
                       
                       try {
                         await provider.addScope(ctrl.text.trim());
@@ -292,19 +297,13 @@ bool _isAddingScope = false;
                         
                         if (c.mounted) Navigator.pop(c);
                       } catch (e) {
+                        if (mounted) {
+                          setState(() => _isAddingScope = false);
+                        }
                         if (c.mounted) {
                           ScaffoldMessenger.of(c).showSnackBar(
                             SnackBar(content: Text('Error: $e')),
                           );
-                        }
-                      } finally {
-                        if (dialogContext.mounted) {
-                          // Reset loading state via setState
-                          Future.microtask(() {
-                            if (mounted) {
-                              setState(() => _isAddingScope = false);
-                            }
-                          });
                         }
                       }
                     },
@@ -320,8 +319,11 @@ bool _isAddingScope = false;
         ),
       ),
     );
+    
     ctrl.dispose();
-    _isAddingScope = false;
+    if (mounted && _isAddingScope) {
+      setState(() => _isAddingScope = false);
+    }
   }
 
   Widget _buildKategoriDropdown(TaskProvider provider) {
@@ -337,7 +339,7 @@ bool _isAddingScope = false;
       children: [
         Expanded(
           child: DropdownButtonFormField<String>(
-            value: validCategory,
+            initialValue: validCategory,
             decoration: const InputDecoration(
               labelText: 'Kategori',
               prefixIcon:
@@ -359,15 +361,15 @@ bool _isAddingScope = false;
     );
   }
 
-  // Bug #3 Fix: Add state variable for loading and error handling
-bool _isAddingCategory = false;
-
+  // Bug #3 Fix: Simplified version dengan barrierDismissible: false
   Future<void> _showAddCategoryDialog(TaskProvider provider) async {
+    if (_isAddingCategory) return; // Prevent double-tap
+    
     final ctrl = TextEditingController();
-    final dialogContext = context;
     
     await showDialog(
-      context: dialogContext,
+      context: context,
+      barrierDismissible: false, // Prevent dismiss while loading
       builder: (c) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Tambah Kategori'),
@@ -388,7 +390,8 @@ bool _isAddingCategory = false;
                   : () async {
                       if (ctrl.text.trim().isEmpty) return;
                       
-                      setDialogState(() => _isAddingCategory = true);
+                      setState(() => _isAddingCategory = true);
+                      setDialogState(() {});
                       
                       try {
                         await provider.addCategory(ctrl.text.trim());
@@ -399,18 +402,13 @@ bool _isAddingCategory = false;
                         
                         if (c.mounted) Navigator.pop(c);
                       } catch (e) {
+                        if (mounted) {
+                          setState(() => _isAddingCategory = false);
+                        }
                         if (c.mounted) {
                           ScaffoldMessenger.of(c).showSnackBar(
                             SnackBar(content: Text('Error: $e')),
                           );
-                        }
-                      } finally {
-                        if (dialogContext.mounted) {
-                          Future.microtask(() {
-                            if (mounted) {
-                              setState(() => _isAddingCategory = false);
-                            }
-                          });
                         }
                       }
                     },
@@ -426,8 +424,11 @@ bool _isAddingCategory = false;
         ),
       ),
     );
+    
     ctrl.dispose();
-    _isAddingCategory = false;
+    if (mounted && _isAddingCategory) {
+      setState(() => _isAddingCategory = false);
+    }
   }
 
   Widget _buildDeadlinePicker() {

@@ -276,15 +276,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           return _buildEmptyState();
         }
 
-        // Bug #4 Fix: Filter blocks dengan valid task dan cleanup invalid blocks
+        // Bug #4 Fix: Filter blocks dengan valid task
         final validBlocks = blocks.where((block) {
           return provider.tasks.any((t) => t.id == block.taskId);
         }).toList();
         
-        // Cleanup invalid blocks (task sudah dihapus)
+        // Cleanup invalid blocks outside build using post-frame callback
         final invalidBlocks = blocks.where((b) => !validBlocks.contains(b)).toList();
-        for (final invalid in invalidBlocks) {
-          provider.deleteTimeBlock(invalid.id);
+        if (invalidBlocks.isNotEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            for (final invalid in invalidBlocks) {
+              provider.deleteTimeBlock(invalid.id);
+            }
+          });
         }
         
         if (validBlocks.isEmpty) {
