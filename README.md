@@ -836,7 +836,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👥 Contributors
 
-- **Farhan** - Initial work - [@Frhannnnn](https://github.com/Frhannnnn)
+- **Muhamad Farhan** - Initial work - [@Frhannnnn](https://github.com/Frhannnnn)
 
 ---
 
