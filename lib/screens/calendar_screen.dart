@@ -24,45 +24,58 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text('Kalender Tugas'),
-        backgroundColor: AppTheme.accent,
-      ),
-      body: Consumer<TaskProvider>(
-        builder: (context, provider, _) {
-          final selectedTasks = _tasksForDate(provider.tasks, _selectedDate);
+      body: SafeArea(
+        child: Consumer<TaskProvider>(
+          builder: (context, provider, _) {
+            final selectedTasks = _tasksForDate(provider.tasks, _selectedDate);
 
-          return Column(
-            children: [
-              _buildMonthHeader(),
-              _buildCalendar(provider.tasks),
-              Expanded(
-                child: selectedTasks.isEmpty
-                    ? _buildEmptyDay()
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-                        itemCount: selectedTasks.length,
-                        itemBuilder: (context, index) {
-                          final task = selectedTasks[index];
-                          return TaskCardWidget(
-                            task: task,
-                            showRanking: true,
-                            totalActiveTasks: provider.activeTasks.length,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AddEditTaskScreen(task: task),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                _buildMonthHeader(),
+                _buildCalendar(provider.tasks),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Text(
+                    'Tugas pada ${DateFormat('d MMMM', 'id_ID').format(_selectedDate)}',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: selectedTasks.isEmpty
+                      ? _buildEmptyDay()
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 96),
+                          itemCount: selectedTasks.length,
+                          itemBuilder: (context, index) {
+                            final task = selectedTasks[index];
+                            return TaskCardWidget(
+                              task: task,
+                              showRanking: true,
+                              totalActiveTasks: provider.activeTasks.length,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => AddEditTaskScreen(task: task),
+                                ),
                               ),
-                            ),
-                            onStatusChange: (status) =>
-                                provider.updateStatus(task.id, status),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          );
-        },
+                              onStatusChange: (status) =>
+                                  provider.updateStatus(task.id, status),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
@@ -70,60 +83,89 @@ class _CalendarScreenState extends State<CalendarScreen> {
           MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
         ),
         backgroundColor: AppTheme.accent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  Widget _buildMonthHeader() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          IconButton(
-            tooltip: 'Bulan sebelumnya',
-            onPressed: () => setState(() {
-              _visibleMonth = DateTime(
-                _visibleMonth.year,
-                _visibleMonth.month - 1,
-              );
-            }),
-            icon: const Icon(Icons.chevron_left),
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  DateFormat('MMMM yyyy', 'id_ID').format(_visibleMonth),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                Text(
-                  DateFormat(
-                    'EEEE, d MMMM yyyy',
-                    'id_ID',
-                  ).format(_selectedDate),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
+          const Text(
+            'Kalender',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
             ),
           ),
-          IconButton(
-            tooltip: 'Bulan berikutnya',
-            onPressed: () => setState(() {
-              _visibleMonth = DateTime(
-                _visibleMonth.year,
-                _visibleMonth.month + 1,
-              );
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: const Icon(Icons.today_rounded,
+                color: AppTheme.textSecondary, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMonthHeader() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => setState(() {
+              _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month - 1);
             }),
-            icon: const Icon(Icons.chevron_right),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.border),
+              ),
+              child: const Icon(Icons.chevron_left_rounded, size: 20),
+            ),
+          ),
+          Expanded(
+            child: Center(
+              child: Text(
+                DateFormat('MMMM yyyy', 'id_ID').format(_visibleMonth),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () => setState(() {
+              _visibleMonth = DateTime(_visibleMonth.year, _visibleMonth.month + 1);
+            }),
+            child: Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.border),
+              ),
+              child: const Icon(Icons.chevron_right_rounded, size: 20),
+            ),
           ),
         ],
       ),
@@ -134,8 +176,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final days = _calendarDays(_visibleMonth);
 
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 14),
+      margin: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
       child: Column(
         children: [
           Row(
@@ -147,7 +194,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         day,
                         style: const TextStyle(
                           fontSize: 11,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w600,
                           color: AppTheme.textSecondary,
                         ),
                       ),
@@ -156,15 +203,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 )
                 .toList(),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: days.length,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
             ),
             itemBuilder: (context, index) {
               final date = days[index];
@@ -174,8 +221,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               final dayTasks = _tasksForDate(tasks, date);
               final hasOverdue = dayTasks.any((task) => task.isOverdue);
 
-              return InkWell(
-                borderRadius: BorderRadius.circular(10),
+              return GestureDetector(
                 onTap: () => setState(() => _selectedDate = date),
                 child: Container(
                   decoration: BoxDecoration(
@@ -183,15 +229,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         ? AppTheme.accent
                         : isToday
                             ? AppTheme.accent.withValues(alpha: 0.1)
-                            : Colors.grey.shade50,
+                            : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppTheme.accent
-                          : isToday
-                              ? AppTheme.accent.withValues(alpha: 0.5)
-                              : AppTheme.border,
-                    ),
+                    border: isToday && !isSelected
+                        ? Border.all(color: AppTheme.accent.withValues(alpha: 0.4))
+                        : null,
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -201,18 +243,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: isSelected || isToday
-                              ? FontWeight.w800
-                              : FontWeight.w600,
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           color: isSelected
                               ? Colors.white
                               : isCurrentMonth
                                   ? AppTheme.textPrimary
-                                  : AppTheme.textSecondary
-                                      .withValues(alpha: 0.45),
+                                  : AppTheme.textSecondary.withValues(alpha: 0.4),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      _buildDayMarker(dayTasks.length, hasOverdue, isSelected),
+                      if (dayTasks.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isSelected
+                                ? Colors.white
+                                : hasOverdue
+                                    ? AppTheme.danger
+                                    : AppTheme.primary,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -224,36 +278,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildDayMarker(int count, bool hasOverdue, bool isSelected) {
-    if (count == 0) return const SizedBox(height: 16);
-
-    final color = isSelected
-        ? Colors.white
-        : hasOverdue
-            ? AppTheme.danger
-            : AppTheme.warning;
-
-    return Container(
-      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: isSelected ? 0.24 : 0.14),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
-      ),
-      child: Center(
-        child: Text(
-          '$count',
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w800,
-            color: color,
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildEmptyDay() {
     return Center(
       child: Padding(
@@ -261,13 +285,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(AppAssets.emptyCalendar, width: 180, height: 135),
-            const SizedBox(height: 14),
+            Image.asset(AppAssets.emptyCalendar, width: 140, height: 105),
+            const SizedBox(height: 16),
             Text(
-              'Tidak ada deadline pada ${DateFormat('d MMMM yyyy', 'id_ID').format(_selectedDate)}',
+              'Tidak ada deadline pada ${DateFormat('d MMMM', 'id_ID').format(_selectedDate)}',
               textAlign: TextAlign.center,
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textPrimary,
               ),
@@ -276,7 +300,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             const Text(
               'Pilih tanggal lain atau tambah tugas baru.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
             ),
           ],
         ),
@@ -299,8 +323,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   List<Task> _tasksForDate(List<Task> tasks, DateTime date) {
-    final result =
-        tasks.where((task) => _isSameDay(task.deadline, date)).toList();
+    final result = tasks.where((task) => _isSameDay(task.deadline, date)).toList();
     result.sort((a, b) => a.deadline.compareTo(b.deadline));
     return result;
   }

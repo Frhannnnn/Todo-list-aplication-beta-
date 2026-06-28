@@ -5,11 +5,10 @@ import '../models/task_model.dart';
 
 class SAWService {
   // Bobot kriteria (total = 1.0)
-  // Kepentingan: 30%, Urgensi: 35%, Deadline: 25%, Estimasi Waktu: 10%
-  static const double bobotKepentingan = 0.30;
-  static const double bobotUrgensi = 0.35;
-  static const double bobotDeadline = 0.25;
-  static const double bobotEstimasi = 0.10;
+  // Kepentingan: 40%, Urgensi: 40%, Estimasi Waktu: 20%
+  static const double bobotKepentingan = 0.40;
+  static const double bobotUrgensi = 0.40;
+  static const double bobotEstimasi = 0.20;
 
   /// Hitung prioritas semua tugas menggunakan metode SAW
   /// dan kembalikan list yang sudah diurutkan berdasarkan ranking
@@ -25,12 +24,11 @@ class SAWService {
     if (activeTasks.isEmpty) return tasks;
 
     // Step 1: Buat matriks keputusan
-    // Kolom: [kepentingan, urgensi, nilaiDeadline, estimasiWaktu]
+    // Kolom: [kepentingan, urgensi, estimasiWaktu]
     List<List<double>> matriks = activeTasks.map((task) {
       return [
         task.tingkatKepentingan.toDouble(),
         task.tingkatUrgensi.toDouble(),
-        _hitungNilaiDeadline(task.sisaHari),
         _hitungNilaiEstimasi(task.estimasiWaktu),
       ];
     }).toList();
@@ -43,8 +41,7 @@ class SAWService {
     for (int i = 0; i < activeTasks.length; i++) {
       double vi = (matriksNormalisasi[i][0] * bobotKepentingan) +
           (matriksNormalisasi[i][1] * bobotUrgensi) +
-          (matriksNormalisasi[i][2] * bobotDeadline) +
-          (matriksNormalisasi[i][3] * bobotEstimasi);
+          (matriksNormalisasi[i][2] * bobotEstimasi);
       nilaiPreferensi.add(vi);
     }
 
@@ -64,16 +61,7 @@ class SAWService {
     return [...updatedTasks, ...doneTasks];
   }
 
-  /// Konversi sisa hari menjadi nilai 1-5 (semakin dekat deadline, semakin tinggi)
-  static double _hitungNilaiDeadline(int sisaHari) {
-    if (sisaHari < 0) return 5.0; // Sudah lewat deadline
-    if (sisaHari == 0) return 5.0;
-    if (sisaHari <= 1) return 4.5;
-    if (sisaHari <= 3) return 4.0;
-    if (sisaHari <= 7) return 3.0;
-    if (sisaHari <= 14) return 2.0;
-    return 1.0;
-  }
+
 
   /// Konversi estimasi waktu menjadi nilai 1-5 (semakin lama, semakin penting dikerjakan segera)
   static double _hitungNilaiEstimasi(int jamEstimasi) {
