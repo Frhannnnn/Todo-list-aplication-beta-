@@ -83,11 +83,12 @@ class _AITaskCreatorScreenState extends State<AITaskCreatorScreen> {
       for (final suggestion in selectedSuggestions) {
         await provider.tambahTugas(
           namaTugas: suggestion.namaTugas,
-          mataKuliah: '',
+          lingkupTugas: provider.customScopes.isNotEmpty
+              ? provider.customScopes.first
+              : 'Perkuliahan',
           deadline: suggestion.deadline ??
               DateTime.now().add(const Duration(days: 7)),
           tingkatKepentingan: suggestion.tingkatKepentingan,
-          tingkatUrgensi: suggestion.tingkatUrgensi,
           estimasiWaktu: suggestion.estimasiWaktu,
         );
       }
@@ -115,7 +116,6 @@ class _AITaskCreatorScreenState extends State<AITaskCreatorScreen> {
     final nameController = TextEditingController(text: suggestion.namaTugas);
     int estimasi = suggestion.estimasiWaktu;
     int kepentingan = suggestion.tingkatKepentingan;
-    int urgensi = suggestion.tingkatUrgensi;
 
     showDialog(
       context: context,
@@ -158,18 +158,6 @@ class _AITaskCreatorScreenState extends State<AITaskCreatorScreen> {
                   onChanged: (v) =>
                       setDialogState(() => kepentingan = v.round()),
                 ),
-                const SizedBox(height: 8),
-                Text('Urgensi: $urgensi',
-                    style: const TextStyle(fontSize: 13)),
-                Slider(
-                  value: urgensi.toDouble(),
-                  min: 1,
-                  max: 5,
-                  divisions: 4,
-                  activeColor: AppTheme.primary,
-                  onChanged: (v) =>
-                      setDialogState(() => urgensi = v.round()),
-                ),
               ],
             ),
           ),
@@ -186,7 +174,7 @@ class _AITaskCreatorScreenState extends State<AITaskCreatorScreen> {
                     deadline: suggestion.deadline,
                     estimasiWaktu: estimasi,
                     tingkatKepentingan: kepentingan,
-                    tingkatUrgensi: urgensi,
+                    tingkatUrgensi: suggestion.tingkatUrgensi,
                     isSelected: suggestion.isSelected,
                   );
                 });

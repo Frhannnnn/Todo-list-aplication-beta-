@@ -14,23 +14,24 @@ import '../utils/app_theme.dart';
 import '../widgets/conflict_notification_banner.dart';
 
 /// Category color mapping for TimeBlocks.
-/// Each TaskCategory has a distinct color for visual identification.
+/// Each task category (String-based) has a distinct color for visual identification.
 class ScheduleColors {
   static const Color kuliah = Color(0xFF3B82F6); // Blue
   static const Color praktikum = Color(0xFF10B981); // Green
   static const Color project = Color(0xFF8B5CF6); // Purple
   static const Color lainnya = Color(0xFF6B7280); // Gray
 
-  /// Returns the color for a given TaskCategory.
-  static Color forCategory(TaskCategory category) {
-    switch (category) {
-      case TaskCategory.kuliah:
+  /// Returns the color for a given category string.
+  static Color forCategory(String category) {
+    switch (category.toLowerCase()) {
+      case 'kuliah':
         return kuliah;
-      case TaskCategory.praktikum:
+      case 'praktikum':
         return praktikum;
-      case TaskCategory.project:
+      case 'proyek':
+      case 'project':
         return project;
-      case TaskCategory.lainnya:
+      default:
         return lainnya;
     }
   }
@@ -67,17 +68,30 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _pageController = PageController(initialPage: _initialPage);
 
     // Start timer to update current time indicator every 60 seconds
+    // Bug #2 Fix: Prevent multiple timers and handle mounted check
+    _startCurrentTimeTimer();
+  }
+
+  void _startCurrentTimeTimer() {
+    // Cancel existing timer if any to prevent memory leak
+    _currentTimeTimer?.cancel();
+    
     _currentTimeTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-      setState(() {
-        _currentTime = DateTime.now();
-      });
+      // Bug #2 Fix: Check mounted before setState to prevent error after dispose
+      if (mounted) {
+        setState(() {
+          _currentTime = DateTime.now();
+        });
+      }
     });
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    // Bug #2 Fix: Properly cancel and nullify timer
     _currentTimeTimer?.cancel();
+    _currentTimeTimer = null;
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -262,12 +276,27 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           return _buildEmptyState();
         }
 
+        // Bug #4 Fix: Filter blocks dengan valid task dan cleanup invalid blocks
+        final validBlocks = blocks.where((block) {
+          return provider.tasks.any((t) => t.id == block.taskId);
+        }).toList();
+        
+        // Cleanup invalid blocks (task sudah dihapus)
+        final invalidBlocks = blocks.where((b) => !validBlocks.contains(b)).toList();
+        for (final invalid in invalidBlocks) {
+          provider.deleteTimeBlock(invalid.id);
+        }
+        
+        if (validBlocks.isEmpty) {
+          return _buildEmptyState();
+        }
+
         return ListView.builder(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           itemCount: 24,
           itemBuilder: (context, hour) {
             final slotBlocks =
-                blocks.where((b) => b.startTime.hour == hour).toList();
+                validBlocks.where((b) => b.startTime.hour == hour).toList();
             return _buildHourSlot(hour, date, slotBlocks, provider, config);
           },
         );
@@ -732,11 +761,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Mata kuliah
+              // Mata kuliah / lingkup
               _buildDetailRow(
-                Icons.school_rounded,
-                'Mata Kuliah',
-                task?.mataKuliah ?? '-',
+                Icons.label_rounded,
+                'Lingkup Tugas',
+                task?.lingkupTugas ?? '-',
               ),
               const SizedBox(height: 12),
               // Deadline

@@ -15,64 +15,66 @@ class TaskListScreen extends StatefulWidget {
   State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
-class _TaskListScreenState extends State<TaskListScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _TaskListScreenState extends State<TaskListScreen> {
   String _searchQuery = '';
   String _filterPrioritas = 'Semua';
   String _sortMode = 'Default';
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            _buildTabBar(),
-            _buildSearchBar(),
-            _buildFilterSortBar(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
+    return Consumer<TaskProvider>(
+      builder: (context, provider, _) {
+        final scopes = provider.customScopes;
+
+        // Dynamically build tabs based on scopes
+        final tabs = <Widget>[
+          const Tab(text: 'Semua', height: 36),
+          ...scopes.map((s) => Tab(text: s, height: 36)),
+        ];
+
+        final tabViews = <Widget>[
+          _buildTaskList(null, provider),
+          ...scopes.map((scope) => _buildTaskList(scope, provider)),
+        ];
+
+        return DefaultTabController(
+          length: tabs.length,
+          child: Scaffold(
+            backgroundColor: AppTheme.background,
+            body: SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildTaskList(null),
-                  _buildTaskList(TaskGroup.individu),
-                  _buildTaskList(TaskGroup.kelompok),
+                  _buildHeader(context, provider),
+                  _buildTabBar(tabs),
+                  _buildSearchBar(),
+                  _buildFilterSortBar(),
+                  Expanded(
+                    child: TabBarView(
+                      children: tabViews,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
-        ),
-        backgroundColor: AppTheme.primary,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-      ),
+            floatingActionButton: FloatingActionButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
+              ),
+              backgroundColor: AppTheme.primary,
+              elevation: 0,
+              shape:
+                  RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.add, color: Colors.white, size: 28),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context, TaskProvider provider) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
       child: Row(
@@ -86,23 +88,26 @@ class _TaskListScreenState extends State<TaskListScreen>
               color: AppTheme.textPrimary,
             ),
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.border),
+          GestureDetector(
+            onTap: () => _showScopeManager(context, provider),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.border),
+              ),
+              child: const Icon(Icons.tune_rounded,
+                  color: AppTheme.textSecondary, size: 20),
             ),
-            child: const Icon(Icons.filter_list_rounded,
-                color: AppTheme.textSecondary, size: 20),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildTabBar(List<Widget> tabs) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
@@ -111,22 +116,22 @@ class _TaskListScreenState extends State<TaskListScreen>
       ),
       padding: const EdgeInsets.all(4),
       child: TabBar(
-        controller: _tabController,
         labelColor: Colors.white,
         unselectedLabelColor: AppTheme.textSecondary,
-        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        labelStyle:
+            const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
         indicator: BoxDecoration(
           color: AppTheme.primary,
           borderRadius: BorderRadius.circular(10),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
-        tabs: const [
-          Tab(text: 'Semua', height: 36),
-          Tab(text: 'Individu', height: 36),
-          Tab(text: 'Kelompok', height: 36),
-        ],
+        isScrollable: tabs.length > 2,
+        tabAlignment:
+            tabs.length > 2 ? TabAlignment.start : TabAlignment.fill,
+        tabs: tabs,
       ),
     );
   }
@@ -137,11 +142,14 @@ class _TaskListScreenState extends State<TaskListScreen>
       child: TextField(
         decoration: InputDecoration(
           hintText: 'Cari tugas...',
-          hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
+          hintStyle:
+              const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          prefixIcon:
+              const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear_rounded, color: AppTheme.textSecondary),
+                  icon: const Icon(Icons.clear_rounded,
+                      color: AppTheme.textSecondary),
                   onPressed: () => setState(() => _searchQuery = ''),
                 )
               : null,
@@ -159,7 +167,8 @@ class _TaskListScreenState extends State<TaskListScreen>
             borderRadius: BorderRadius.circular(14),
             borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         onChanged: (value) => setState(() => _searchQuery = value),
       ),
@@ -172,14 +181,15 @@ class _TaskListScreenState extends State<TaskListScreen>
       tasks = tasks
           .where((t) =>
               t.namaTugas.toLowerCase().contains(q) ||
-              t.mataKuliah.toLowerCase().contains(q))
+              t.lingkupTugas.toLowerCase().contains(q))
           .toList();
     }
 
     if (_filterPrioritas != 'Semua') {
       tasks = tasks.where((t) {
         if (t.ranking == 0 || t.status == TaskStatus.selesai) return false;
-        return AppTheme.getPrioritasLabel(t.ranking, totalActive) == _filterPrioritas;
+        return AppTheme.getPrioritasLabel(t.ranking, totalActive) ==
+            _filterPrioritas;
       }).toList();
     }
 
@@ -212,14 +222,14 @@ class _TaskListScreenState extends State<TaskListScreen>
                 child: GestureDetector(
                   onTap: () => setState(() => _filterPrioritas = label),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppTheme.primary
-                          : Colors.white,
+                      color: isSelected ? AppTheme.primary : Colors.white,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isSelected ? AppTheme.primary : AppTheme.border,
+                        color:
+                            isSelected ? AppTheme.primary : AppTheme.border,
                       ),
                     ),
                     child: Text(
@@ -227,7 +237,9 @@ class _TaskListScreenState extends State<TaskListScreen>
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : AppTheme.textSecondary,
+                        color: isSelected
+                            ? Colors.white
+                            : AppTheme.textSecondary,
                       ),
                     ),
                   ),
@@ -244,14 +256,16 @@ class _TaskListScreenState extends State<TaskListScreen>
                 child: GestureDetector(
                   onTap: () => setState(() => _sortMode = label),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? AppTheme.secondary
-                          : Colors.white,
+                      color:
+                          isSelected ? AppTheme.secondary : Colors.white,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: isSelected ? AppTheme.secondary : AppTheme.border,
+                        color: isSelected
+                            ? AppTheme.secondary
+                            : AppTheme.border,
                       ),
                     ),
                     child: Text(
@@ -259,7 +273,9 @@ class _TaskListScreenState extends State<TaskListScreen>
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isSelected ? Colors.white : AppTheme.textSecondary,
+                        color: isSelected
+                            ? Colors.white
+                            : AppTheme.textSecondary,
                       ),
                     ),
                   ),
@@ -272,49 +288,45 @@ class _TaskListScreenState extends State<TaskListScreen>
     );
   }
 
-  Widget _buildTaskList(TaskGroup? group) {
-    return Consumer<TaskProvider>(
-      builder: (context, provider, _) {
-        List<Task> tasks = group == null
-            ? provider.tasks
-            : group == TaskGroup.individu
-                ? provider.individuTasks
-                : provider.kelompokTasks;
+  Widget _buildTaskList(String? scope, TaskProvider provider) {
+    List<Task> tasks;
+    if (scope == null) {
+      // "Semua" tab
+      final active = provider.activeTasks;
+      final done = provider.completedTasks;
+      tasks = [...active, ...done];
+    } else {
+      tasks = provider.getTasksByScope(scope);
+    }
 
-        if (group == null) {
-          final active = provider.activeTasks;
-          final done = provider.completedTasks;
-          tasks = [...active, ...done];
-        }
+    final totalActiveTasks = provider.activeTasks.length;
+    tasks = _applyFilterAndSort(tasks, totalActiveTasks);
 
-        final totalActiveTasks = provider.activeTasks.length;
-        tasks = _applyFilterAndSort(tasks, totalActiveTasks);
+    if (tasks.isEmpty && _filterPrioritas != 'Semua') {
+      return _buildEmptyFilterState(_filterPrioritas);
+    }
 
-        if (tasks.isEmpty && _filterPrioritas != 'Semua') {
-          return _buildEmptyFilterState(_filterPrioritas);
-        }
+    if (tasks.isEmpty) {
+      return _buildEmptyState();
+    }
 
-        if (tasks.isEmpty) {
-          return _buildEmptyState();
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-          itemCount: tasks.length,
-          itemBuilder: (context, index) {
-            final task = tasks[index];
-            return TaskCardWidget(
-              task: task,
-              showRanking: true,
-              totalActiveTasks: totalActiveTasks,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => AddEditTaskScreen(task: task)),
-              ),
-              onDelete: () => _confirmDelete(context, provider, task),
-              onStatusChange: (status) => provider.updateStatus(task.id, status),
-            );
-          },
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return TaskCardWidget(
+          task: task,
+          showRanking: true,
+          totalActiveTasks: totalActiveTasks,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => AddEditTaskScreen(task: task)),
+          ),
+          onDelete: () => _confirmDelete(context, provider, task),
+          onStatusChange: (status) =>
+              provider.updateStatus(task.id, status),
         );
       },
     );
@@ -324,7 +336,8 @@ class _TaskListScreenState extends State<TaskListScreen>
     showDialog(
       context: ctx,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Hapus Tugas'),
         content: Text('Hapus "${task.namaTugas}"?'),
         actions: [
@@ -343,13 +356,29 @@ class _TaskListScreenState extends State<TaskListScreen>
                 ),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.danger),
             child: const Text('Hapus'),
           ),
         ],
       ),
     );
   }
+
+  // ─── Scope Manager ────────────────────────────────────────────────────────
+
+  void _showScopeManager(BuildContext context, TaskProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _ScopeManagerSheet(provider: provider),
+    );
+  }
+
+  // ─── Empty States ─────────────────────────────────────────────────────────
 
   Widget _buildEmptyFilterState(String label) {
     return Center(
@@ -398,10 +427,163 @@ class _TaskListScreenState extends State<TaskListScreen>
           const SizedBox(height: 8),
           const Text(
             'Tap tombol + untuk menambah tugas baru',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            style:
+                TextStyle(color: AppTheme.textSecondary, fontSize: 14),
           ),
         ],
       ),
     );
+  }
+}
+
+// ─── Scope Manager Bottom Sheet ───────────────────────────────────────────────
+
+class _ScopeManagerSheet extends StatefulWidget {
+  final TaskProvider provider;
+  const _ScopeManagerSheet({required this.provider});
+
+  @override
+  State<_ScopeManagerSheet> createState() => _ScopeManagerSheetState();
+}
+
+class _ScopeManagerSheetState extends State<_ScopeManagerSheet> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scopes = widget.provider.customScopes;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Kelola Lingkup Tugas',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Tab pada daftar tugas diambil dari lingkup ini.',
+              style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            // List scopes
+            if (scopes.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Belum ada lingkup. Tambahkan di bawah.',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+              )
+            else
+              ...scopes.map((scope) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.label_outline_rounded,
+                          color: AppTheme.primary, size: 18),
+                    ),
+                    title: Text(scope,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500)),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded,
+                          color: AppTheme.danger, size: 20),
+                      onPressed: () {
+                        widget.provider.removeScope(scope);
+                        setState(() {});
+                      },
+                    ),
+                  )),
+            const Divider(height: 24),
+            // Add new scope
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ctrl,
+                    decoration: InputDecoration(
+                      hintText: 'Nama lingkup baru...',
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: AppTheme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            const BorderSide(color: AppTheme.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                            color: AppTheme.primary, width: 1.5),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    onSubmitted: (_) => _addScope(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _addScope,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  child: const Text('Tambah'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addScope() {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) return;
+    widget.provider.addScope(text);
+    _ctrl.clear();
+    setState(() {});
   }
 }
