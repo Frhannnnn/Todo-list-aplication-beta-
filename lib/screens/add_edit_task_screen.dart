@@ -7,6 +7,7 @@ import '../services/task_provider.dart';
 import '../models/task_model.dart';
 import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
+import 'ai_task_creator_screen.dart';
 
 class AddEditTaskScreen extends StatefulWidget {
   final Task? task;
@@ -63,12 +64,26 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text(isEdit ? '✏️ Edit Tugas' : '➕ Tambah Tugas'),
-        backgroundColor: AppTheme.primary,
+        title: Text(isEdit ? 'Edit Tugas' : 'Tambah Tugas'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         actions: [
+          if (!isEdit)
+            IconButton(
+              icon: const Icon(Icons.auto_awesome_rounded, color: AppTheme.primary),
+              tooltip: 'Buat Tugas Otomatis (AI)',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AITaskCreatorScreen()),
+                );
+              },
+            ),
           if (isEdit)
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: Colors.white),
+              icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
               onPressed: _confirmDelete,
             ),
         ],
@@ -136,10 +151,10 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
 
   Widget _buildSection(String title, List<Widget> children) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppTheme.border),
       ),
       child: Column(
@@ -150,7 +165,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: AppTheme.primary)),
-          const Divider(height: 16),
+          const SizedBox(height: 12),
           ...children,
         ],
       ),

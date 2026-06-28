@@ -34,8 +34,11 @@ class _NotificationSettingsScreenState
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('🔔 Pengaturan Notifikasi'),
-        backgroundColor: AppTheme.primary,
+        title: const Text('Notifikasi'),
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
       ),
       body: Consumer<TaskProvider>(
         builder: (context, provider, _) {

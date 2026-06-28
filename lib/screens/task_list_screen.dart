@@ -19,8 +19,8 @@ class _TaskListScreenState extends State<TaskListScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   String _searchQuery = '';
-  String _filterPrioritas = 'Semua'; // nilai valid: 'Semua', 'Tinggi', 'Sedang', 'Rendah'
-  String _sortMode = 'Default'; // nilai valid: 'Default', 'Prioritas Tertinggi'
+  String _filterPrioritas = 'Semua';
+  String _sortMode = 'Default';
 
   @override
   void initState() {
@@ -38,66 +38,128 @@ class _TaskListScreenState extends State<TaskListScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text('Data Tugas'),
-        backgroundColor: AppTheme.primary,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white60,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'Semua'),
-            Tab(text: 'Individu'),
-            Tab(text: 'Kelompok'),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            _buildTabBar(),
+            _buildSearchBar(),
+            _buildFilterSortBar(),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTaskList(null),
+                  _buildTaskList(TaskGroup.individu),
+                  _buildTaskList(TaskGroup.kelompok),
+                ],
+              ),
+            ),
           ],
         ),
       ),
-      body: Column(
-        children: [
-          _buildSearchBar(),
-          _buildFilterSortBar(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildTaskList(null),
-                _buildTaskList(TaskGroup.individu),
-                _buildTaskList(TaskGroup.kelompok),
-              ],
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
         ),
         backgroundColor: AppTheme.primary,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Tambah Tugas',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Data Tugas',
+            style: TextStyle(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: const Icon(Icons.filter_list_rounded,
+                color: AppTheme.textSecondary, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.all(4),
+      child: TabBar(
+        controller: _tabController,
+        labelColor: Colors.white,
+        unselectedLabelColor: AppTheme.textSecondary,
+        labelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        indicator: BoxDecoration(
+          color: AppTheme.primary,
+          borderRadius: BorderRadius.circular(10),
         ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        tabs: const [
+          Tab(text: 'Semua', height: 36),
+          Tab(text: 'Individu', height: 36),
+          Tab(text: 'Kelompok', height: 36),
+        ],
       ),
     );
   }
 
   Widget _buildSearchBar() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
       child: TextField(
         decoration: InputDecoration(
           hintText: 'Cari tugas...',
-          prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
+          hintStyle: const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+          prefixIcon: const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.clear, color: AppTheme.textSecondary),
+                  icon: const Icon(Icons.clear_rounded, color: AppTheme.textSecondary),
                   onPressed: () => setState(() => _searchQuery = ''),
                 )
               : null,
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppTheme.border),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppTheme.border),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
         onChanged: (value) => setState(() => _searchQuery = value),
       ),
@@ -105,32 +167,26 @@ class _TaskListScreenState extends State<TaskListScreen>
   }
 
   List<Task> _applyFilterAndSort(List<Task> tasks, int totalActive) {
-    // 1. Filter pencarian teks
     if (_searchQuery.isNotEmpty) {
       final q = _searchQuery.toLowerCase();
       tasks = tasks
-          .where(
-            (t) =>
-                t.namaTugas.toLowerCase().contains(q) ||
-                t.mataKuliah.toLowerCase().contains(q),
-          )
+          .where((t) =>
+              t.namaTugas.toLowerCase().contains(q) ||
+              t.mataKuliah.toLowerCase().contains(q))
           .toList();
     }
 
-    // 2. Filter prioritas
     if (_filterPrioritas != 'Semua') {
       tasks = tasks.where((t) {
         if (t.ranking == 0 || t.status == TaskStatus.selesai) return false;
-        return AppTheme.getPrioritasLabel(t.ranking, totalActive) ==
-            _filterPrioritas;
+        return AppTheme.getPrioritasLabel(t.ranking, totalActive) == _filterPrioritas;
       }).toList();
     }
 
-    // 3. Sort
     if (_sortMode == 'Prioritas Tertinggi') {
       tasks.sort((a, b) {
         if (a.ranking == 0 && b.ranking == 0) return 0;
-        if (a.ranking == 0) return 1; // ranking 0 ke bawah
+        if (a.ranking == 0) return 1;
         if (b.ranking == 0) return -1;
         return a.ranking.compareTo(b.ranking);
       });
@@ -143,126 +199,75 @@ class _TaskListScreenState extends State<TaskListScreen>
     const filterOptions = ['Semua', 'Tinggi', 'Sedang', 'Rendah'];
     const sortOptions = ['Default', 'Prioritas Tertinggi'];
 
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Baris filter prioritas
-          Row(
-            children: [
-              const Text(
-                'Filter:',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: filterOptions.map((label) {
-                      final isSelected = _filterPrioritas == label;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: FilterChip(
-                          label: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isSelected
-                                  ? Colors.white
-                                  : AppTheme.textPrimary,
-                            ),
-                          ),
-                          selected: isSelected,
-                          onSelected: (_) =>
-                              setState(() => _filterPrioritas = label),
-                          selectedColor: AppTheme.primary,
-                          backgroundColor: AppTheme.background,
-                          checkmarkColor: Colors.white,
-                          showCheckmark: false,
-                          side: BorderSide(
-                            color: isSelected
-                                ? AppTheme.primary
-                                : AppTheme.border,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 0),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      );
-                    }).toList(),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            ...filterOptions.map((label) {
+              final isSelected = _filterPrioritas == label;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: GestureDetector(
+                  onTap: () => setState(() => _filterPrioritas = label),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.primary
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.primary : AppTheme.border,
+                      ),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : AppTheme.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          // Baris sort
-          Row(
-            children: [
-              const Text(
-                'Urutkan:',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: sortOptions.map((label) {
-                      final isSelected = _sortMode == label;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: FilterChip(
-                          label: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isSelected
-                                  ? Colors.white
-                                  : AppTheme.textPrimary,
-                            ),
-                          ),
-                          selected: isSelected,
-                          onSelected: (_) =>
-                              setState(() => _sortMode = label),
-                          selectedColor: AppTheme.primary,
-                          backgroundColor: AppTheme.background,
-                          checkmarkColor: Colors.white,
-                          showCheckmark: false,
-                          side: BorderSide(
-                            color: isSelected
-                                ? AppTheme.primary
-                                : AppTheme.border,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4, vertical: 0),
-                          materialTapTargetSize:
-                              MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                      );
-                    }).toList(),
+              );
+            }),
+            const SizedBox(width: 8),
+            Container(width: 1, height: 20, color: AppTheme.border),
+            const SizedBox(width: 8),
+            ...sortOptions.map((label) {
+              final isSelected = _sortMode == label;
+              return Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: GestureDetector(
+                  onTap: () => setState(() => _sortMode = label),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.secondary
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? AppTheme.secondary : AppTheme.border,
+                      ),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: isSelected ? Colors.white : AppTheme.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              );
+            }),
+          ],
+        ),
       ),
     );
   }
@@ -294,7 +299,7 @@ class _TaskListScreenState extends State<TaskListScreen>
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
           itemCount: tasks.length,
           itemBuilder: (context, index) {
             final task = tasks[index];
@@ -304,12 +309,10 @@ class _TaskListScreenState extends State<TaskListScreen>
               totalActiveTasks: totalActiveTasks,
               onTap: () => Navigator.push(
                 context,
-                MaterialPageRoute(
-                    builder: (_) => AddEditTaskScreen(task: task)),
+                MaterialPageRoute(builder: (_) => AddEditTaskScreen(task: task)),
               ),
               onDelete: () => _confirmDelete(context, provider, task),
-              onStatusChange: (status) =>
-                  provider.updateStatus(task.id, status),
+              onStatusChange: (status) => provider.updateStatus(task.id, status),
             );
           },
         );
@@ -321,7 +324,7 @@ class _TaskListScreenState extends State<TaskListScreen>
     showDialog(
       context: ctx,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Hapus Tugas'),
         content: Text('Hapus "${task.namaTugas}"?'),
         actions: [
@@ -353,12 +356,24 @@ class _TaskListScreenState extends State<TaskListScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.filter_list_off, size: 64, color: AppTheme.textSecondary),
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.filter_list_off_rounded,
+                size: 32, color: AppTheme.primary),
+          ),
           const SizedBox(height: 16),
           Text(
-            'Tidak ada tugas dengan prioritas $label saat ini.',
+            'Tidak ada tugas dengan prioritas $label',
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppTheme.textSecondary),
+            style: const TextStyle(
+              color: AppTheme.textSecondary,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
@@ -370,20 +385,20 @@ class _TaskListScreenState extends State<TaskListScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Image.asset(AppAssets.emptyTasks, width: 180, height: 135),
-          const SizedBox(height: 16),
+          Image.asset(AppAssets.emptyTasks, width: 160, height: 120),
+          const SizedBox(height: 20),
           const Text(
             'Belum ada tugas',
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           const Text(
             'Tap tombol + untuk menambah tugas baru',
-            style: TextStyle(color: AppTheme.textSecondary),
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
           ),
         ],
       ),

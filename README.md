@@ -55,14 +55,13 @@ flutter run
 
 ## 🧮 Metode SAW
 
-Aplikasi menggunakan **Simple Additive Weighting** dengan 4 kriteria:
+Aplikasi menggunakan **Simple Additive Weighting** dengan 3 kriteria:
 
 | Kriteria | Bobot | Keterangan |
 |----------|-------|-----------|
-| Tingkat Urgensi | 35% | Seberapa mendesak tugas |
-| Tingkat Kepentingan | 30% | Seberapa penting tugas |
-| Kedekatan Deadline | 25% | Semakin dekat = skor lebih tinggi |
-| Estimasi Waktu | 10% | Semakin lama = perlu segera dikerjakan |
+| Tingkat Urgensi | 40% | Seberapa mendesak tugas |
+| Tingkat Kepentingan | 40% | Seberapa penting tugas |
+| Estimasi Waktu | 20% | Semakin lama = perlu segera dikerjakan |
 
 ### Rumus:
 ```

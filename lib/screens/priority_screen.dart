@@ -17,60 +17,66 @@ class PriorityScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text('Eisenhower Matrix'),
-        backgroundColor: AppTheme.secondary,
-      ),
-      body: Consumer<TaskProvider>(
-        builder: (context, provider, _) {
-          final activeTasks = provider.activeTasks;
-          final groupedTasks = _groupTasks(activeTasks);
+      body: SafeArea(
+        child: Consumer<TaskProvider>(
+          builder: (context, provider, _) {
+            final activeTasks = provider.activeTasks;
+            final groupedTasks = _groupTasks(activeTasks);
 
-          if (activeTasks.isEmpty) return _buildEmptyState();
+            if (activeTasks.isEmpty) return _buildEmptyState();
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-            children: [
-              _buildIntroCard(activeTasks.length, groupedTasks),
-              const SizedBox(height: 14),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final isWide = constraints.maxWidth >= 680;
-                  final cards = EisenhowerQuadrant.values
-                      .map(
-                        (quadrant) => _QuadrantCard(
-                          config: _configFor(quadrant),
-                          tasks: groupedTasks[quadrant] ?? [],
-                        ),
-                      )
-                      .toList();
-
-                  if (!isWide) {
-                    return GridView.count(
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(child: _buildHeader()),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildIntroCard(activeTasks.length, groupedTasks),
+                        const SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
                       childAspectRatio: 0.72,
-                      children: cards,
-                    );
-                  }
+                    ),
+                    delegate: SliverChildListDelegate(
+                      EisenhowerQuadrant.values
+                          .map((quadrant) => _QuadrantCard(
+                                config: _configFor(quadrant),
+                                tasks: groupedTasks[quadrant] ?? [],
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
 
-                  return GridView.count(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    childAspectRatio: 0.95,
-                    children: cards,
-                  );
-                },
-              ),
-            ],
-          );
-        },
+  Widget _buildHeader() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 16),
+      child: Text(
+        'Prioritas',
+        style: TextStyle(
+          fontSize: 26,
+          fontWeight: FontWeight.w800,
+          color: AppTheme.textPrimary,
+        ),
       ),
     );
   }
@@ -107,48 +113,45 @@ class PriorityScreen extends StatelessWidget {
 
   Widget _buildIntroCard(int activeCount, Map<EisenhowerQuadrant, List<Task>> grouped) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.25)),
       ),
       child: Column(
         children: [
           Row(
             children: [
               Container(
-                width: 42,
-                height: 42,
+                width: 46,
+                height: 46,
                 decoration: BoxDecoration(
-                  color: AppTheme.secondary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppTheme.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(
-                  Icons.grid_view_rounded,
-                  color: AppTheme.secondary,
-                ),
+                child: const Icon(Icons.grid_view_rounded,
+                    color: AppTheme.secondary, size: 24),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Pembagian prioritas 4 kuadran',
+                      'Eisenhower Matrix',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.textPrimary,
                       ),
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '$activeCount tugas aktif dikelompokkan dari tingkat kepentingan dan urgensi.',
+                      '$activeCount tugas aktif dikelompokkan',
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppTheme.textSecondary,
-                        height: 1.35,
                       ),
                     ),
                   ],
@@ -156,7 +159,7 @@ class PriorityScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: EisenhowerQuadrant.values.map((q) {
@@ -173,14 +176,25 @@ class PriorityScreen extends StatelessWidget {
   Widget _buildDistribItem(String label, int count, Color color) {
     return Column(
       children: [
-        Text(
-          '$count',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: color,
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
+            ),
           ),
         ),
+        const SizedBox(height: 4),
         Text(
           label,
           style: const TextStyle(
@@ -199,8 +213,8 @@ class PriorityScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(AppAssets.emptyPriority, width: 180, height: 135),
-            const SizedBox(height: 16),
+            Image.asset(AppAssets.emptyPriority, width: 160, height: 120),
+            const SizedBox(height: 20),
             const Text(
               'Belum ada tugas aktif',
               style: TextStyle(
@@ -211,7 +225,7 @@ class PriorityScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Tambah tugas dengan nilai kepentingan dan urgensi untuk melihat matrix.',
+              'Tambah tugas untuk melihat matrix prioritas.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppTheme.textSecondary),
             ),
@@ -226,7 +240,7 @@ class PriorityScreen extends StatelessWidget {
       case EisenhowerQuadrant.doNow:
         return const _QuadrantConfig(
           title: 'Kerjakan',
-          subtitle: 'Penting dan mendesak',
+          subtitle: 'Penting & mendesak',
           action: 'Prioritas utama',
           icon: Icons.priority_high_rounded,
           color: AppTheme.danger,
@@ -250,7 +264,7 @@ class PriorityScreen extends StatelessWidget {
       case EisenhowerQuadrant.eliminate:
         return const _QuadrantConfig(
           title: 'Eliminasi',
-          subtitle: 'Kurang penting dan tidak mendesak',
+          subtitle: 'Kurang penting',
           action: 'Tinjau ulang',
           icon: Icons.low_priority_rounded,
           color: AppTheme.success,
@@ -286,24 +300,24 @@ class _QuadrantCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: config.color.withValues(alpha: 0.28)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: config.color.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 8),
+            padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
             child: Row(
               children: [
                 Container(
-                  width: 32,
-                  height: 32,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
-                    color: config.color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(10),
+                    color: config.color.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(11),
                   ),
-                  child: Icon(config.icon, color: config.color, size: 18),
+                  child: Icon(config.icon, color: config.color, size: 20),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -314,7 +328,7 @@ class _QuadrantCard extends StatelessWidget {
                         config.title,
                         style: const TextStyle(
                           fontSize: 13,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w700,
                           color: AppTheme.textPrimary,
                         ),
                       ),
@@ -339,7 +353,7 @@ class _QuadrantCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: config.color.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
                 config.action,
@@ -374,9 +388,9 @@ class _QuadrantCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: config.color.withValues(alpha: 0.12),
+        color: config.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: config.color.withValues(alpha: 0.35)),
+        border: Border.all(color: config.color.withValues(alpha: 0.3)),
       ),
       child: Text(
         '${tasks.length}',
@@ -413,8 +427,7 @@ class _MatrixTaskTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
+    return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => AddEditTaskScreen(task: task)),
@@ -422,9 +435,9 @@ class _MatrixTaskTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppTheme.border),
+          color: color.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.15)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -437,13 +450,12 @@ class _MatrixTaskTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 Text(
                   '#${task.ranking}',
                   style: TextStyle(
@@ -455,19 +467,9 @@ class _MatrixTaskTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text(
-              task.mataKuliah,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.calendar_today_outlined, size: 12, color: color),
+                Icon(Icons.calendar_today_outlined, size: 10, color: color),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
@@ -475,17 +477,14 @@ class _MatrixTaskTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11,
-                      color: task.isOverdue
-                          ? AppTheme.danger
-                          : AppTheme.textSecondary,
-                      fontWeight:
-                          task.isOverdue ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 10,
+                      color: task.isOverdue ? AppTheme.danger : AppTheme.textSecondary,
+                      fontWeight: task.isOverdue ? FontWeight.w700 : FontWeight.w500,
                     ),
                   ),
                 ),
                 _scorePill('P', task.tingkatKepentingan),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 _scorePill('U', task.tingkatUrgensi),
               ],
             ),
@@ -497,7 +496,7 @@ class _MatrixTaskTile extends StatelessWidget {
 
   Widget _scorePill(String label, int value) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(6),
@@ -505,7 +504,7 @@ class _MatrixTaskTile extends StatelessWidget {
       child: Text(
         '$label$value',
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 9,
           color: color,
           fontWeight: FontWeight.w800,
         ),

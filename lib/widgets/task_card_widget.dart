@@ -29,193 +29,205 @@ class TaskCardWidget extends StatelessWidget {
       task.status != TaskStatus.selesai &&
       totalActiveTasks > 0;
 
+  Color get _cardBorderColor {
+    if (task.isOverdue) return AppTheme.danger.withValues(alpha: 0.4);
+    if (task.isDueToday) return AppTheme.warning.withValues(alpha: 0.4);
+    if (task.isDueSoon) return AppTheme.warning.withValues(alpha: 0.25);
+    return AppTheme.primary.withValues(alpha: 0.2);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final prioritasColor = task.ranking > 0
-        ? AppTheme.getPrioritasColor(task.ranking, 10)
-        : AppTheme.textSecondary;
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: task.isOverdue
-                ? AppTheme.danger.withValues(alpha: 0.5)
-                : task.isDueToday
-                    ? AppTheme.warning.withValues(alpha: 0.5)
-                    : AppTheme.border,
-          ),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2)),
-          ],
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: _cardBorderColor, width: 1.5),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Color indicator bar on left
-            IntrinsicHeight(
-              child: Row(
-                children: [
-                  Container(
-                    width: 5,
-                    decoration: BoxDecoration(
-                      color: task.isOverdue
-                          ? AppTheme.danger
-                          : task.isDueToday
-                              ? AppTheme.warning
-                              : task.isDueSoon
-                                  ? AppTheme.warning.withValues(alpha: 0.6)
-                                  : AppTheme.success,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        bottomLeft: Radius.circular(16),
+            // Header row: icon + title + deadline badge
+            Row(
+              children: [
+                _buildCategoryIcon(),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.namaTugas,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textPrimary,
+                          decoration: task.status == TaskStatus.selesai
+                              ? TextDecoration.lineThrough
+                              : null,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header row
-                          Row(
-                            children: [
-                              if (showRanking && task.ranking > 0) ...[
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        prioritasColor.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text('#${task.ranking}',
-                                      style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w800,
-                                          color: prioritasColor)),
-                                ),
-                                const SizedBox(width: 4),
-                              ],
-                              if (_shouldShowPriorityBadge) ...[
-                                _buildPriorityBadge(),
-                                const SizedBox(width: 6),
-                              ],
-                              Expanded(
-                                child: Text(task.namaTugas,
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.textPrimary,
-                                      decoration:
-                                          task.status == TaskStatus.selesai
-                                              ? TextDecoration.lineThrough
-                                              : null,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis),
-                              ),
-                              _buildStatusBadge(),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          // Mata Kuliah
-                          Row(
-                            children: [
-                              Image.asset(
-                                AppAssets.categoryIcon(task.category),
-                                width: 18,
-                                height: 18,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(task.mataKuliah,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppTheme.textSecondary)),
-                              ),
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: task.group == TaskGroup.individu
-                                      ? AppTheme.accent.withValues(alpha: 0.1)
-                                      : AppTheme.secondary
-                                          .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                    task.group == TaskGroup.individu
-                                        ? 'Individu'
-                                        : 'Kelompok',
-                                    style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w600,
-                                        color: task.group == TaskGroup.individu
-                                            ? AppTheme.accent
-                                            : AppTheme.secondary)),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          // Deadline & info row
-                          Row(
-                            children: [
-                              Icon(Icons.calendar_today,
-                                  size: 12,
-                                  color: task.isOverdue
-                                      ? AppTheme.danger
-                                      : AppTheme.textSecondary),
-                              const SizedBox(width: 4),
-                              Text(
-                                  DateFormat('d MMM yyyy, HH:mm', 'id_ID')
-                                      .format(task.deadline),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: task.isOverdue
-                                        ? AppTheme.danger
-                                        : AppTheme.textSecondary,
-                                    fontWeight: task.isOverdue
-                                        ? FontWeight.w600
-                                        : FontWeight.normal,
-                                  )),
-                              const Spacer(),
-                              if (task.isOverdue)
-                                _buildDeadlineChip(
-                                    'Terlambat!', AppTheme.danger)
-                              else if (task.isDueToday)
-                                _buildDeadlineChip(
-                                    'Hari ini!', AppTheme.warning)
-                              else if (task.isDueSoon)
-                                _buildDeadlineChip('${task.sisaHari} hari lagi',
-                                    AppTheme.warning)
-                              else
-                                _buildDeadlineChip(
-                                    '${task.sisaHari} hari', AppTheme.success),
-                            ],
-                          ),
-                          if (onDelete != null || onStatusChange != null) ...[
-                            const Divider(height: 12),
-                            _buildActions(),
-                          ],
-                        ],
+                      const SizedBox(height: 2),
+                      Text(
+                        task.mataKuliah,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.textSecondary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 8),
+                _buildDeadlineBadge(),
+              ],
             ),
+            // Tags row
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                _buildCategoryTag(),
+                if (_shouldShowPriorityBadge) ...[
+                  const SizedBox(width: 6),
+                  _buildPriorityBadge(),
+                ],
+                if (showRanking && task.ranking > 0) ...[
+                  const SizedBox(width: 6),
+                  _buildRankingBadge(),
+                ],
+                const Spacer(),
+                _buildStatusBadge(),
+              ],
+            ),
+            // Actions
+            if (onDelete != null || onStatusChange != null) ...[
+              const SizedBox(height: 10),
+              Container(
+                height: 1,
+                color: AppTheme.border.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 10),
+              _buildActions(),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryIcon() {
+    final color = task.isOverdue
+        ? AppTheme.danger
+        : task.isDueToday
+            ? AppTheme.warning
+            : AppTheme.primary;
+
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Center(
+        child: Image.asset(
+          AppAssets.categoryIcon(task.category),
+          width: 22,
+          height: 22,
+          errorBuilder: (_, __, ___) => Icon(
+            _getCategoryIconData(),
+            color: color,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData _getCategoryIconData() {
+    switch (task.category) {
+      case TaskCategory.kuliah:
+        return Icons.school_rounded;
+      case TaskCategory.praktikum:
+        return Icons.science_rounded;
+      case TaskCategory.project:
+        return Icons.code_rounded;
+      case TaskCategory.lainnya:
+        return Icons.folder_rounded;
+    }
+  }
+
+  Widget _buildDeadlineBadge() {
+    String label;
+    Color color;
+
+    if (task.isOverdue) {
+      label = 'Terlambat';
+      color = AppTheme.danger;
+    } else if (task.isDueToday) {
+      label = 'Hari Ini';
+      color = AppTheme.warning;
+    } else if (task.sisaHari <= 2) {
+      label = '${task.sisaHari} Hari Lagi';
+      color = AppTheme.warning;
+    } else {
+      label = '${task.sisaHari} Hari Lagi';
+      color = AppTheme.success;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          DateFormat('d MMM yyyy', 'id_ID').format(task.deadline),
+          style: const TextStyle(
+            fontSize: 10,
+            color: AppTheme.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryTag() {
+    final color = task.category == TaskCategory.kuliah
+        ? AppTheme.primary
+        : task.category == TaskCategory.praktikum
+            ? AppTheme.accent
+            : task.category == TaskCategory.project
+                ? AppTheme.warning
+                : AppTheme.textSecondary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        task.categoryLabel,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
       ),
     );
@@ -225,16 +237,35 @@ class TaskCardWidget extends StatelessWidget {
     final label = AppTheme.getPrioritasLabel(task.ranking, totalActiveTasks);
     final color = AppTheme.getPrioritasColor(task.ranking, totalActiveTasks);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 9,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRankingBadge() {
+    final color = AppTheme.getPrioritasColor(task.ranking, totalActiveTasks);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        '#${task.ranking}',
+        style: TextStyle(
+          fontSize: 10,
           fontWeight: FontWeight.w800,
           color: color,
         ),
@@ -245,28 +276,19 @@ class TaskCardWidget extends StatelessWidget {
   Widget _buildStatusBadge() {
     Color color = AppTheme.getStatusColor(task.status);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(task.statusLabel,
-          style: TextStyle(
-              fontSize: 9, fontWeight: FontWeight.w700, color: color)),
-    );
-  }
-
-  Widget _buildDeadlineChip(String label, Color color) {
-    return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Text(label,
-          style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+      child: Text(
+        task.statusLabel,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
     );
   }
 
@@ -275,73 +297,73 @@ class TaskCardWidget extends StatelessWidget {
       children: [
         if (onStatusChange != null) ...[
           if (task.status != TaskStatus.selesai) ...[
-            InkWell(
+            _actionButton(
+              icon: Icons.check_rounded,
+              label: task.status == TaskStatus.belumDikerjakan ? 'Mulai' : 'Selesaikan',
+              color: AppTheme.success,
               onTap: () => onStatusChange!(
-                  task.status == TaskStatus.belumDikerjakan
-                      ? TaskStatus.sedangDikerjakan
-                      : TaskStatus.selesai),
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppTheme.success.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.check, size: 12, color: AppTheme.success),
-                    const SizedBox(width: 4),
-                    Text(
-                        task.status == TaskStatus.belumDikerjakan
-                            ? 'Mulai'
-                            : 'Selesaikan',
-                        style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.success)),
-                  ],
-                ),
+                task.status == TaskStatus.belumDikerjakan
+                    ? TaskStatus.sedangDikerjakan
+                    : TaskStatus.selesai,
               ),
             ),
           ] else ...[
-            InkWell(
+            _actionButton(
+              icon: Icons.undo_rounded,
+              label: 'Buka Lagi',
+              color: AppTheme.warning,
               onTap: () => onStatusChange!(TaskStatus.belumDikerjakan),
-              borderRadius: BorderRadius.circular(6),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppTheme.warning.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.undo, size: 12, color: AppTheme.warning),
-                    SizedBox(width: 4),
-                    Text('Buka Lagi',
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.warning)),
-                  ],
-                ),
-              ),
             ),
           ],
         ],
         const Spacer(),
         if (onDelete != null)
-          InkWell(
+          GestureDetector(
             onTap: onDelete,
-            borderRadius: BorderRadius.circular(6),
             child: Container(
-              padding: const EdgeInsets.all(5),
-              child: const Icon(Icons.delete_outline,
-                  size: 16, color: AppTheme.danger),
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.danger.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.delete_outline_rounded,
+                  size: 18, color: AppTheme.danger),
             ),
           ),
       ],
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -17,7 +17,7 @@ void main() {
     await tester.pumpWidget(const TugasKuApp());
     await tester.pump();
 
-    expect(find.text('TugasKu'), findsOneWidget);
+    expect(find.text('Tugas'), findsOneWidget);
     expect(find.text('Dashboard'), findsOneWidget);
   });
 }
