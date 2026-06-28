@@ -75,7 +75,7 @@ class TaskCardWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        task.mataKuliah,
+                        task.lingkupTugas,
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppTheme.textSecondary,
@@ -154,16 +154,12 @@ class TaskCardWidget extends StatelessWidget {
   }
 
   IconData _getCategoryIconData() {
-    switch (task.category) {
-      case TaskCategory.kuliah:
-        return Icons.school_rounded;
-      case TaskCategory.praktikum:
-        return Icons.science_rounded;
-      case TaskCategory.project:
-        return Icons.code_rounded;
-      case TaskCategory.lainnya:
-        return Icons.folder_rounded;
-    }
+    final cat = task.category.toLowerCase();
+    if (cat == 'kuliah') return Icons.school_rounded;
+    if (cat == 'praktikum') return Icons.science_rounded;
+    if (cat == 'proyek' || cat == 'project') return Icons.code_rounded;
+    if (cat == 'ujian') return Icons.quiz_rounded;
+    return Icons.folder_rounded;
   }
 
   Widget _buildDeadlineBadge() {
@@ -208,13 +204,19 @@ class TaskCardWidget extends StatelessWidget {
   }
 
   Widget _buildCategoryTag() {
-    final color = task.category == TaskCategory.kuliah
-        ? AppTheme.primary
-        : task.category == TaskCategory.praktikum
-            ? AppTheme.accent
-            : task.category == TaskCategory.project
-                ? AppTheme.warning
-                : AppTheme.textSecondary;
+    final cat = task.category.toLowerCase();
+    Color color;
+    if (cat == 'kuliah') {
+      color = AppTheme.primary;
+    } else if (cat == 'praktikum') {
+      color = AppTheme.accent;
+    } else if (cat == 'proyek' || cat == 'project') {
+      color = AppTheme.warning;
+    } else if (cat == 'ujian') {
+      color = AppTheme.danger;
+    } else {
+      color = AppTheme.textSecondary;
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

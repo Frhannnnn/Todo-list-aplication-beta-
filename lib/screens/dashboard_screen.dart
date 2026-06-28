@@ -36,7 +36,7 @@ class DashboardScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         _buildUpcomingTasks(provider),
                         const SizedBox(height: 28),
-                        _buildSectionTitle('Mata Kuliah Aktif'),
+                        _buildSectionTitle('Lingkup Tugas Aktif'),
                         const SizedBox(height: 12),
                         _buildCourseCards(provider),
                         const SizedBox(height: 100),
@@ -335,47 +335,57 @@ class DashboardScreen extends StatelessWidget {
       return _buildEmptyState('Tidak ada tugas mendatang 🎉');
     }
 
-    return Column(
-      children: tasks
-          .take(3)
-          .map((t) => TaskCardWidget(
-                task: t,
-                showRanking: false,
-                totalActiveTasks: provider.activeTasks.length,
-              ))
-          .toList(),
+    return Builder(
+      builder: (context) => Column(
+        children: tasks
+            .take(3)
+            .map((t) => TaskCardWidget(
+                  task: t,
+                  showRanking: false,
+                  totalActiveTasks: provider.activeTasks.length,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => AddEditTaskScreen(task: t)),
+                  ),
+                ))
+            .toList(),
+      ),
     );
   }
 
   Widget _buildCourseCards(TaskProvider provider) {
-    // Group tasks by mataKuliah
-    final courseMap = <String, List<dynamic>>{};
+    // Group tasks by lingkupTugas
+    final scopeMap = <String, List<dynamic>>{};
     for (final task in provider.activeTasks) {
-      courseMap.putIfAbsent(task.mataKuliah, () => []).add(task);
+      scopeMap.putIfAbsent(task.lingkupTugas, () => []).add(task);
     }
 
-    if (courseMap.isEmpty) {
-      return _buildEmptyState('Belum ada mata kuliah aktif');
+    if (scopeMap.isEmpty) {
+      return _buildEmptyState('Belum ada lingkup tugas aktif');
     }
 
-    final courses = courseMap.entries.take(4).toList();
+    final scopes = scopeMap.entries.take(4).toList();
 
     return SizedBox(
       height: 130,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: courses.length,
+        itemCount: scopes.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final entry = courses[index];
+          final entry = scopes[index];
           final taskCount = entry.value.length;
-          final completedInCourse = provider.tasks
-              .where((t) => t.mataKuliah == entry.key && t.status == TaskStatus.selesai)
+          final completedInScope = provider.tasks
+              .where((t) =>
+                  t.lingkupTugas == entry.key &&
+                  t.status == TaskStatus.selesai)
               .length;
-          final totalInCourse = provider.tasks
-              .where((t) => t.mataKuliah == entry.key)
+          final totalInScope = provider.tasks
+              .where((t) => t.lingkupTugas == entry.key)
               .length;
-          final progress = totalInCourse > 0 ? completedInCourse / totalInCourse : 0.0;
+          final progress =
+              totalInScope > 0 ? completedInScope / totalInScope : 0.0;
 
           final colors = [
             AppTheme.primary,
@@ -403,7 +413,7 @@ class DashboardScreen extends StatelessWidget {
                     color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(Icons.menu_book_rounded, color: color, size: 20),
+                  child: Icon(Icons.label_rounded, color: color, size: 20),
                 ),
                 const Spacer(),
                 Text(

@@ -1,5 +1,3 @@
-import '../models/task_model.dart';
-
 class AppAssets {
   static const logo = 'assets/images/logo.png';
   static const emptyTasks = 'assets/images/empty_tasks.png';
@@ -11,29 +9,18 @@ class AppAssets {
   static const categoryProject = 'assets/icons/category_project.png';
   static const categoryLainnya = 'assets/icons/category_lainnya.png';
 
-  static String categoryIcon(TaskCategory category) {
-    switch (category) {
-      case TaskCategory.kuliah:
+  /// Mengembalikan icon path berdasarkan nama kategori (String-based).
+  static String categoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'kuliah':
         return categoryKuliah;
-      case TaskCategory.praktikum:
+      case 'praktikum':
         return categoryPraktikum;
-      case TaskCategory.project:
+      case 'proyek':
+      case 'project':
         return categoryProject;
-      case TaskCategory.lainnya:
+      default:
         return categoryLainnya;
-    }
-  }
-
-  static String categoryLabel(TaskCategory category) {
-    switch (category) {
-      case TaskCategory.kuliah:
-        return 'Kuliah';
-      case TaskCategory.praktikum:
-        return 'Praktikum';
-      case TaskCategory.project:
-        return 'Project';
-      case TaskCategory.lainnya:
-        return 'Lainnya';
     }
   }
 }

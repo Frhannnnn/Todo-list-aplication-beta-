@@ -26,7 +26,6 @@ class NotificationService {
 
     tz.initializeTimeZones();
 
-    // Coba set timezone lokal - fallback ke Asia/Jakarta
     try {
       tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
     } catch (_) {
@@ -51,9 +50,7 @@ class NotificationService {
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
 
-    // Buat notification channels (Android 8+)
     await _createChannels();
-
     _isInitialized = true;
   }
 
@@ -104,7 +101,8 @@ class NotificationService {
   }
 
   // ─────────────────────────────────────────────
-  // SCHEDULE NOTIFIKASI UNTUK SATU TUGAS
+  // SCHEDULE NOTIFIKASI PER-TUGAS
+  // Menghormati task.notifEnabled dan task.notifSchedule
   // ─────────────────────────────────────────────
 
   Future<void> scheduleTaskNotifications(Task task) async {
@@ -112,8 +110,10 @@ class NotificationService {
 
     await cancelTaskNotifications(task.id);
 
-    final now = DateTime.now();
+    // Jika notif dinonaktifkan untuk tugas ini, stop.
+    if (!task.notifEnabled) return;
 
+    final now = DateTime.now();
     if (task.status == TaskStatus.selesai) return;
 
     if (task.deadline.isBefore(now)) {
@@ -121,16 +121,17 @@ class NotificationService {
       return;
     }
 
+    final schedule = task.notifSchedule;
     final sisaJam = task.deadline.difference(now).inHours;
 
-    if (sisaJam >= 72) {
+    // H-3 hari
+    if (schedule.contains('h-3') && sisaJam >= 72) {
       final notifTime = task.deadline.subtract(const Duration(days: 3));
       if (notifTime.isAfter(now)) {
         await _scheduleNotification(
           id: _taskNotifId(task.id, 1),
           title: '📅 Deadline 3 Hari Lagi',
-          body:
-              '"${task.namaTugas}" (${task.mataKuliah}) deadline dalam 3 hari.',
+          body: '"${task.namaTugas}" (${task.lingkupTugas}) deadline dalam 3 hari.',
           scheduledTime: notifTime,
           channelId: _channelIdReminder,
           payload: task.id,
@@ -138,7 +139,8 @@ class NotificationService {
       }
     }
 
-    if (sisaJam >= 24) {
+    // H-1 hari
+    if (schedule.contains('h-1') && sisaJam >= 24) {
       final notifTime = task.deadline.subtract(const Duration(hours: 24));
       if (notifTime.isAfter(now)) {
         await _scheduleNotification(
@@ -152,7 +154,8 @@ class NotificationService {
       }
     }
 
-    if (sisaJam >= 3) {
+    // H-3 jam
+    if (schedule.contains('3jam') && sisaJam >= 3) {
       final notifTime = task.deadline.subtract(const Duration(hours: 3));
       if (notifTime.isAfter(now)) {
         await _scheduleNotification(
@@ -166,7 +169,8 @@ class NotificationService {
       }
     }
 
-    if (task.deadline.isAfter(now)) {
+    // Tepat deadline
+    if (schedule.contains('deadline') && task.deadline.isAfter(now)) {
       await _scheduleNotification(
         id: _taskNotifId(task.id, 4),
         title: '🔔 Deadline Sekarang!',
@@ -182,7 +186,7 @@ class NotificationService {
     await _plugin.show(
       _taskNotifId(task.id, 0),
       '❌ Tugas Terlambat!',
-      '"${task.namaTugas}" sudah melewati deadline. Segera hubungi dosen!',
+      '"${task.namaTugas}" sudah melewati deadline.',
       const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelIdOverdue,
@@ -212,7 +216,7 @@ class NotificationService {
   }
 
   // ─────────────────────────────────────────────
-  // PENGINGAT HARIAN
+  // PENGINGAT HARIAN (tetap global)
   // ─────────────────────────────────────────────
 
   Future<void> scheduleDailyReminder({
@@ -236,7 +240,7 @@ class NotificationService {
 
     await _plugin.zonedSchedule(
       9999,
-      '📚 Selamat Pagi, Mahasiswa!',
+      '📚 Selamat Pagi!',
       'Kamu punya $activeTasks tugas yang belum selesai. Yuk cek TugasKu!',
       scheduledDate,
       const NotificationDetails(
@@ -250,8 +254,7 @@ class NotificationService {
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation
-              .absoluteTime, // Diperbaiki di sini
+          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -304,14 +307,14 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: payload,
       uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation
-              .absoluteTime, // Diperbaiki di sini
+          UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
+  // Bug #8 Fix: Use larger range dan better hashing untuk prevent collision
   int _taskNotifId(String taskId, int type) {
-    final hash = taskId.replaceAll('-', '').substring(0, 7);
-    return int.parse(hash, radix: 16) % 100000 + type;
+    final baseId = taskId.hashCode.abs() % 900000000;
+    return baseId * 10 + type; // Ensure type differentiation
   }
 
   Future<bool> areNotificationsEnabled() async {
