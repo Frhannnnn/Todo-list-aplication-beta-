@@ -57,7 +57,7 @@ List<Task> generateRandomActiveTasks(Random rng, {int? count}) {
     return Task(
       id: 'task-$i',
       namaTugas: 'Tugas ${String.fromCharCode(65 + rng.nextInt(26))}${rng.nextInt(100)}',
-      mataKuliah: 'MK ${String.fromCharCode(65 + rng.nextInt(26))}${rng.nextInt(10)}',
+      lingkupTugas: 'MK ${String.fromCharCode(65 + rng.nextInt(26))}${rng.nextInt(10)}',
       deadline: DateTime.now().add(Duration(days: rng.nextInt(30) + 1)),
       tingkatKepentingan: rng.nextInt(5) + 1, // 1–5
       tingkatUrgensi: rng.nextInt(5) + 1, // 1–5
@@ -267,10 +267,10 @@ void main() {
           final boundaryTask = Task(
             id: 'boundary-$i',
             namaTugas: 'Boundary Task $i',
-            mataKuliah: 'MK Test',
+            lingkupTugas: 'MK Test',
             deadline: DateTime.now().add(Duration(days: rng.nextInt(30) + 1)),
             tingkatKepentingan: 4, // tepat di batas
-            tingkatUrgensi: 4, // tepat di batas
+             // tepat di batas
             estimasiWaktu: rng.nextInt(10) + 1,
             status: TaskStatus.belumDikerjakan,
             createdAt: DateTime.now(),

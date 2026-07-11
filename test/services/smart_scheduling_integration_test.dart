@@ -14,10 +14,11 @@ import 'package:tugasku/models/task_model.dart';
 import 'package:tugasku/models/time_block_model.dart';
 import 'package:tugasku/models/schedule_config_model.dart';
 import 'package:tugasku/services/task_provider.dart';
+import '../mocks/mock_notification_service.dart';
 import 'package:tugasku/services/ai_task_creator_service.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  
 
   setUp(() {
     // Mock the flutter_local_notifications plugin channel
@@ -61,7 +62,7 @@ void main() {
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline = DateTime.now().add(const Duration(hours: 48));
@@ -69,10 +70,10 @@ void main() {
       // Step 1: Add task (triggers SAW → scheduling → persistence)
       await provider.tambahTugas(
         namaTugas: 'Integration Test Task',
-        mataKuliah: 'CS201',
+        lingkupTugas: 'CS201',
         deadline: deadline,
         tingkatKepentingan: 4,
-        tingkatUrgensi: 4,
+        
         estimasiWaktu: 3,
       );
 
@@ -105,7 +106,7 @@ void main() {
           reason: 'Persisted blocks count should match');
 
       // Step 6: Simulate app reload - create new provider with persisted data
-      final provider2 = TaskProvider();
+      final provider2 = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 300));
 
       // Verify reloaded schedule matches
@@ -121,7 +122,7 @@ void main() {
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline1 = DateTime.now().add(const Duration(hours: 48));
@@ -130,20 +131,20 @@ void main() {
       // Add first task
       await provider.tambahTugas(
         namaTugas: 'High Priority Task',
-        mataKuliah: 'CS201',
+        lingkupTugas: 'CS201',
         deadline: deadline1,
         tingkatKepentingan: 5,
-        tingkatUrgensi: 5,
+        
         estimasiWaktu: 2,
       );
 
       // Add second task
       await provider.tambahTugas(
         namaTugas: 'Low Priority Task',
-        mataKuliah: 'CS202',
+        lingkupTugas: 'CS202',
         deadline: deadline2,
         tingkatKepentingan: 2,
-        tingkatUrgensi: 2,
+        
         estimasiWaktu: 2,
       );
 
@@ -185,7 +186,7 @@ void main() {
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 300));
 
       // Update config via the proper API (which persists it)
@@ -226,17 +227,17 @@ void main() {
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline = DateTime.now().add(const Duration(hours: 72));
 
       await provider.tambahTugas(
         namaTugas: 'Timing Test Task',
-        mataKuliah: 'CS301',
+        lingkupTugas: 'CS301',
         deadline: deadline,
         tingkatKepentingan: 3,
-        tingkatUrgensi: 3,
+        
         estimasiWaktu: 2,
       );
 
@@ -250,7 +251,7 @@ void main() {
       await provider.editTugas(
         task.id,
         tingkatKepentingan: 5,
-        tingkatUrgensi: 5,
+        
         estimasiWaktu: 4,
       );
 
@@ -279,7 +280,7 @@ void main() {
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline = DateTime.now().add(const Duration(hours: 96));
@@ -290,10 +291,10 @@ void main() {
 
         await provider.tambahTugas(
           namaTugas: 'Task $i',
-          mataKuliah: 'CS302',
+          lingkupTugas: 'CS302',
           deadline: deadline.add(Duration(hours: i * 24)),
           tingkatKepentingan: 1 + (i % 5),
-          tingkatUrgensi: 1 + (i % 5),
+
           estimasiWaktu: 2,
         );
 
@@ -318,26 +319,26 @@ void main() {
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline = DateTime.now().add(const Duration(hours: 48));
 
       await provider.tambahTugas(
         namaTugas: 'Task A',
-        mataKuliah: 'CS303',
+        lingkupTugas: 'CS303',
         deadline: deadline,
         tingkatKepentingan: 5,
-        tingkatUrgensi: 5,
+        
         estimasiWaktu: 3,
       );
 
       await provider.tambahTugas(
         namaTugas: 'Task B',
-        mataKuliah: 'CS303',
+        lingkupTugas: 'CS303',
         deadline: deadline,
         tingkatKepentingan: 3,
-        tingkatUrgensi: 3,
+        
         estimasiWaktu: 3,
       );
 
@@ -371,7 +372,7 @@ void main() {
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       // Step 1: Use AI service to extract tasks from text
@@ -393,10 +394,9 @@ Makalah Etika Profesi tentang AI
       for (final suggestion in suggestions.take(3)) {
         await provider.tambahTugas(
           namaTugas: suggestion.namaTugas,
-          mataKuliah: 'AI Generated',
+          lingkupTugas: 'AI Generated',
           deadline: deadline,
           tingkatKepentingan: suggestion.tingkatKepentingan,
-          tingkatUrgensi: suggestion.tingkatUrgensi,
           estimasiWaktu: suggestion.estimasiWaktu,
         );
       }
@@ -444,7 +444,7 @@ Makalah Etika Profesi tentang AI
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline = DateTime.now().add(const Duration(hours: 72));
@@ -452,10 +452,10 @@ Makalah Etika Profesi tentang AI
       // Add a manual task first
       await provider.tambahTugas(
         namaTugas: 'Existing Manual Task',
-        mataKuliah: 'CS401',
+        lingkupTugas: 'CS401',
         deadline: deadline,
         tingkatKepentingan: 5,
-        tingkatUrgensi: 5,
+        
         estimasiWaktu: 2,
       );
 
@@ -466,10 +466,10 @@ Makalah Etika Profesi tentang AI
       // Simulate AI task confirmation
       await provider.tambahTugas(
         namaTugas: 'AI Generated Task',
-        mataKuliah: 'AI Course',
+        lingkupTugas: 'AI Course',
         deadline: deadline,
         tingkatKepentingan: 3,
-        tingkatUrgensi: 3,
+        
         estimasiWaktu: 2,
       );
 
@@ -497,17 +497,17 @@ Makalah Etika Profesi tentang AI
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline = DateTime.now().add(const Duration(hours: 48));
 
       await provider.tambahTugas(
         namaTugas: 'Persistence Test',
-        mataKuliah: 'CS501',
+        lingkupTugas: 'CS501',
         deadline: deadline,
         tingkatKepentingan: 4,
-        tingkatUrgensi: 4,
+        
         estimasiWaktu: 3,
       );
 
@@ -546,7 +546,7 @@ Makalah Etika Profesi tentang AI
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 300));
 
       // Update to cross-midnight config via proper API
@@ -587,7 +587,7 @@ Makalah Etika Profesi tentang AI
         'tugasku_schedule_config': 'also invalid',
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       // Should not crash, should have empty schedule
@@ -606,7 +606,7 @@ Makalah Etika Profesi tentang AI
         // No schedule_blocks or schedule_config keys
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       expect(provider.timeBlocks, isEmpty,
@@ -622,17 +622,17 @@ Makalah Etika Profesi tentang AI
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline = DateTime.now().add(const Duration(hours: 72));
 
       await provider.tambahTugas(
         namaTugas: 'Config Change Test',
-        mataKuliah: 'CS502',
+        lingkupTugas: 'CS502',
         deadline: deadline,
         tingkatKepentingan: 4,
-        tingkatUrgensi: 4,
+        
         estimasiWaktu: 3,
       );
 
@@ -673,7 +673,7 @@ Makalah Etika Profesi tentang AI
         'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
       });
 
-      final provider = TaskProvider();
+      final provider = TaskProvider(notifService: MockNotificationService());
       await Future.delayed(const Duration(milliseconds: 200));
 
       final deadline = DateTime.now().add(const Duration(hours: 48));
@@ -681,10 +681,10 @@ Makalah Etika Profesi tentang AI
       // Add task
       await provider.tambahTugas(
         namaTugas: 'Persist After Modify',
-        mataKuliah: 'CS503',
+        lingkupTugas: 'CS503',
         deadline: deadline,
         tingkatKepentingan: 4,
-        tingkatUrgensi: 4,
+        
         estimasiWaktu: 2,
       );
 
@@ -717,3 +717,4 @@ Makalah Etika Profesi tentang AI
     });
   });
 }
+

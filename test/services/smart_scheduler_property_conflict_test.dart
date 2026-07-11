@@ -64,10 +64,10 @@ Task _generateTask({
   return Task(
     id: id,
     namaTugas: 'Task $id',
-    mataKuliah: 'MK Test',
+    lingkupTugas: 'MK Test',
     deadline: deadlineVal,
     tingkatKepentingan: 1 + rng.nextInt(5),
-    tingkatUrgensi: 1 + rng.nextInt(5),
+
     estimasiWaktu: estimasi,
     status: TaskStatus.belumDikerjakan,
     createdAt: createdAtVal,
@@ -425,10 +425,10 @@ void main() {
           final taskA = Task(
             id: 'taskA-$i',
             namaTugas: 'Task A $i',
-            mataKuliah: 'MK',
+            lingkupTugas: 'MK',
             deadline: deadlineA,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: 2,
             status: TaskStatus.belumDikerjakan,
             createdAt: now.subtract(const Duration(hours: 10)),
@@ -439,10 +439,10 @@ void main() {
           final taskB = Task(
             id: 'taskB-$i',
             namaTugas: 'Task B $i',
-            mataKuliah: 'MK',
+            lingkupTugas: 'MK',
             deadline: deadlineB,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: 2,
             status: TaskStatus.belumDikerjakan,
             createdAt: now.subtract(const Duration(hours: 5)),
@@ -529,10 +529,10 @@ void main() {
           final taskA = Task(
             id: 'taskA-$i',
             namaTugas: 'Task A $i',
-            mataKuliah: 'MK',
+            lingkupTugas: 'MK',
             deadline: deadline,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: 2,
             status: TaskStatus.belumDikerjakan,
             createdAt: createdAtA,
@@ -543,10 +543,10 @@ void main() {
           final taskB = Task(
             id: 'taskB-$i',
             namaTugas: 'Task B $i',
-            mataKuliah: 'MK',
+            lingkupTugas: 'MK',
             deadline: deadline,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: 2,
             status: TaskStatus.belumDikerjakan,
             createdAt: createdAtB,
@@ -745,10 +745,10 @@ void main() {
             return Task(
               id: 'task-$i-$idx',
               namaTugas: 'Task $idx',
-              mataKuliah: 'MK',
+              lingkupTugas: 'MK',
               deadline: contestedSlot.add(Duration(hours: 3 + rng.nextInt(10))),
               tingkatKepentingan: 3,
-              tingkatUrgensi: 3,
+              
               estimasiWaktu: 2,
               status: TaskStatus.belumDikerjakan,
               createdAt: now.subtract(Duration(hours: idx * 5)),
@@ -829,10 +829,10 @@ void main() {
           final taskA = Task(
             id: 'taskA-$i',
             namaTugas: 'High Priority $i',
-            mataKuliah: 'MK',
+            lingkupTugas: 'MK',
             deadline: contestedSlot.add(const Duration(hours: 5)),
             tingkatKepentingan: 5,
-            tingkatUrgensi: 5,
+            
             estimasiWaktu: 1,
             status: TaskStatus.belumDikerjakan,
             createdAt: now.subtract(const Duration(hours: 10)),
@@ -843,10 +843,10 @@ void main() {
           final taskB = Task(
             id: 'taskB-$i',
             namaTugas: 'Low Priority $i',
-            mataKuliah: 'MK',
+            lingkupTugas: 'MK',
             deadline: contestedSlot.add(const Duration(hours: 5)),
             tingkatKepentingan: 1,
-            tingkatUrgensi: 1,
+            
             estimasiWaktu: 1,
             status: TaskStatus.belumDikerjakan,
             createdAt: now.subtract(const Duration(hours: 5)),
@@ -923,3 +923,4 @@ void main() {
     );
   });
 }
+

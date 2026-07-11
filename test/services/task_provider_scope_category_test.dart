@@ -2,17 +2,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/services/task_provider.dart';
 
+import '../mocks/mock_notification_service.dart';
+
 void main() {
   group('TaskProvider - Scope & Category Management', () {
     late TaskProvider taskProvider;
 
     setUp(() async {
-      // Clear all persisted data first
+      TestWidgetsFlutterBinding.ensureInitialized();
       SharedPreferences.setMockInitialValues({});
-      
-      // Initialize TaskProvider
-      taskProvider = TaskProvider();
-      await taskProvider._init();
+      taskProvider = TaskProvider(notifService: MockNotificationService());
+      await taskProvider.init();
     });
 
     tearDown(() async {
@@ -234,8 +234,8 @@ void main() {
         await taskProvider.addScope('Persistent Scope');
 
         // Act - Create new provider instance and load data
-        final newProvider = TaskProvider();
-        await newProvider._init();
+        final newProvider = TaskProvider(notifService: MockNotificationService());
+        await newProvider.init();
 
         // Assert
         expect(
@@ -249,8 +249,8 @@ void main() {
         await taskProvider.addCategory('Persistent Category');
 
         // Act - Create new provider instance and load data
-        final newProvider = TaskProvider();
-        await newProvider._init();
+        final newProvider = TaskProvider(notifService: MockNotificationService());
+        await newProvider.init();
 
         // Assert
         expect(
@@ -261,3 +261,4 @@ void main() {
     });
   });
 }
+

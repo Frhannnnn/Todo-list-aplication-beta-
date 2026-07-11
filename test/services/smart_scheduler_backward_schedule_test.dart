@@ -27,10 +27,10 @@ void main() {
     return Task(
       id: id,
       namaTugas: 'Test Task',
-      mataKuliah: 'Test',
+      lingkupTugas: 'Test',
       deadline: deadline,
       tingkatKepentingan: 3,
-      tingkatUrgensi: 3,
+      
       estimasiWaktu: estimasiWaktu,
       createdAt: DateTime(2024, 1, 1),
       sawScore: sawScore,
@@ -446,3 +446,4 @@ void main() {
     });
   });
 }
+

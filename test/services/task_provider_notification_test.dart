@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/services/task_provider.dart';
+import '../mocks/mock_notification_service.dart';
 import 'package:tugasku/models/task_model.dart';
 
 void main() {
@@ -8,12 +9,13 @@ void main() {
     late TaskProvider taskProvider;
 
     setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
       // Clear all persisted data first
       SharedPreferences.setMockInitialValues({});
       
       // Initialize TaskProvider
-      taskProvider = TaskProvider();
-      await taskProvider._init();
+      taskProvider = TaskProvider(notifService: MockNotificationService());
+      await taskProvider.init();
     });
 
     tearDown(() async {
@@ -62,8 +64,8 @@ void main() {
         await taskProvider.setNotifEnabled(false);
 
         // Act
-        final newProvider = TaskProvider();
-        await newProvider._init();
+        final newProvider = TaskProvider(notifService: MockNotificationService());
+        await newProvider.init();
 
         // Assert
         expect(newProvider.notifEnabled, false);
@@ -106,8 +108,8 @@ void main() {
         );
 
         // Act
-        final newProvider = TaskProvider();
-        await newProvider._init();
+        final newProvider = TaskProvider(notifService: MockNotificationService());
+        await newProvider.init();
 
         // Assert
         expect(newProvider.dailyReminderEnabled, true);
@@ -236,3 +238,4 @@ void main() {
     });
   });
 }
+

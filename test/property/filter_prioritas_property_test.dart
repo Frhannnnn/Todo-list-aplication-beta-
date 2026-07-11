@@ -38,10 +38,10 @@ Task _makeTask({
   return Task(
     id: id,
     namaTugas: 'Task $id',
-    mataKuliah: 'MK $id',
+    lingkupTugas: 'MK $id',
     deadline: DateTime.now().add(const Duration(days: 7)),
     tingkatKepentingan: 3,
-    tingkatUrgensi: 3,
+    
     estimasiWaktu: 2,
     status: status,
     createdAt: DateTime.now(),

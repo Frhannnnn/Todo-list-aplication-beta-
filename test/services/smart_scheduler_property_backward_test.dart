@@ -50,10 +50,10 @@ Task _generateRandomTask(Random rng, DateTime now) {
   return Task(
     id: 'task-${rng.nextInt(100000)}',
     namaTugas: 'Tugas ${rng.nextInt(1000)}',
-    mataKuliah: 'MK ${rng.nextInt(100)}',
+    lingkupTugas: 'MK ${rng.nextInt(100)}',
     deadline: deadline,
     tingkatKepentingan: 1 + rng.nextInt(5),
-    tingkatUrgensi: 1 + rng.nextInt(5),
+
     estimasiWaktu: estimasi,
     createdAt: now.subtract(Duration(days: rng.nextInt(30))),
     sawScore: sawScore,
@@ -272,10 +272,10 @@ void main() {
           final task = Task(
             id: 'task-$i',
             namaTugas: 'Tugas $i',
-            mataKuliah: 'MK $i',
+            lingkupTugas: 'MK $i',
             deadline: deadline,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: estimasi,
             createdAt: now.subtract(const Duration(days: 1)),
             sawScore: 0.5,
@@ -371,10 +371,10 @@ void main() {
           final task = Task(
             id: 'task-$i',
             namaTugas: 'Tugas $i',
-            mataKuliah: 'MK $i',
+            lingkupTugas: 'MK $i',
             deadline: deadline,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: estimasi,
             createdAt: now.subtract(const Duration(days: 1)),
             sawScore: 0.5,
@@ -465,10 +465,10 @@ void main() {
           final task = Task(
             id: 'task-$i',
             namaTugas: 'Tugas $i',
-            mataKuliah: 'MK $i',
+            lingkupTugas: 'MK $i',
             deadline: deadline,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: estimasi,
             createdAt: now.subtract(const Duration(days: 1)),
             sawScore: 0.5,
@@ -595,10 +595,10 @@ void main() {
           final task = Task(
             id: 'task-$i',
             namaTugas: 'Tugas $i',
-            mataKuliah: 'MK $i',
+            lingkupTugas: 'MK $i',
             deadline: deadline,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: estimasi,
             createdAt: now.subtract(const Duration(days: 1)),
             sawScore: 0.5,
@@ -645,10 +645,10 @@ void main() {
           final task = Task(
             id: 'task-$i',
             namaTugas: 'Tugas $i',
-            mataKuliah: 'MK $i',
+            lingkupTugas: 'MK $i',
             deadline: deadline,
             tingkatKepentingan: 3,
-            tingkatUrgensi: 3,
+            
             estimasiWaktu: estimasi,
             createdAt: now.subtract(const Duration(days: 1)),
             sawScore: 0.5,
@@ -751,3 +751,4 @@ void main() {
     );
   });
 }
+

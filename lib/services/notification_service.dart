@@ -313,7 +313,9 @@ class NotificationService {
 
   // Bug #8 Fix: Use larger range dan better hashing untuk prevent collision
   int _taskNotifId(String taskId, int type) {
-    final baseId = taskId.hashCode.abs() % 900000000;
+    // 32-bit integer max is 2147483647. We need baseId * 10 + type < 2147483647
+    // So baseId must be < 214748364
+    final baseId = taskId.hashCode.abs() % 200000000;
     return baseId * 10 + type; // Ensure type differentiation
   }
 

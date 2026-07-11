@@ -30,10 +30,10 @@ Task _makeTask({required int ranking}) {
   return Task(
     id: 'task-$ranking-${DateTime.now().microsecondsSinceEpoch}',
     namaTugas: 'Task ranking $ranking',
-    mataKuliah: 'MK Test',
+    lingkupTugas: 'MK Test',
     deadline: DateTime.now().add(const Duration(days: 7)),
     tingkatKepentingan: 3,
-    tingkatUrgensi: 3,
+    
     estimasiWaktu: 2,
     status: TaskStatus.belumDikerjakan,
     createdAt: DateTime.now(),

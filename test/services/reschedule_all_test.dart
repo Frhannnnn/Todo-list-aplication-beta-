@@ -37,10 +37,10 @@ void main() {
     return Task(
       id: id,
       namaTugas: '$name $id',
-      mataKuliah: 'CS101',
+      lingkupTugas: 'CS101',
       deadline: deadline ?? DateTime(2024, 6, 16, 17), // Tomorrow 5PM
       tingkatKepentingan: 3,
-      tingkatUrgensi: 3,
+      
       estimasiWaktu: estimasiWaktu,
       status: status,
       createdAt: createdAt ?? DateTime(2024, 6, 1),
@@ -535,3 +535,4 @@ void main() {
     });
   });
 }
+
