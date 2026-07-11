@@ -345,10 +345,10 @@ void main() {
       return Task(
         id: id,
         namaTugas: 'Task $id',
-        mataKuliah: 'CS101',
+        lingkupTugas: 'CS101',
         deadline: deadline ?? DateTime(2024, 6, 20, 17),
         tingkatKepentingan: 3,
-        tingkatUrgensi: 3,
+        
         estimasiWaktu: 2,
         createdAt: createdAt ?? DateTime(2024, 6, 1),
         sawScore: sawScore,
@@ -675,3 +675,4 @@ void main() {
     });
   });
 }
+

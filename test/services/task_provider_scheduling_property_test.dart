@@ -64,10 +64,10 @@ Task _generateTask({
   return Task(
     id: taskId,
     namaTugas: 'Task $taskId',
-    mataKuliah: 'MK Test',
+    lingkupTugas: 'MK Test',
     deadline: deadlineVal,
     tingkatKepentingan: 1 + rng.nextInt(5),
-    tingkatUrgensi: 1 + rng.nextInt(5),
+
     estimasiWaktu: estimasi,
     status: status ?? TaskStatus.belumDikerjakan,
     createdAt: createdAt,
@@ -999,3 +999,4 @@ void main() {
     );
   });
 }
+

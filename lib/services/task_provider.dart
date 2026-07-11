@@ -16,7 +16,7 @@ class TaskProvider with ChangeNotifier {
   List<Task> _tasks = [];
   final _uuid = const Uuid();
   static const String _storageKey = 'tugasku_tasks';
-  final _notifService = NotificationService();
+  NotificationService _notifService = NotificationService();
 
   // Smart Scheduling fields
   List<TimeBlock> _timeBlocks = [];
@@ -110,9 +110,15 @@ class TaskProvider with ChangeNotifier {
     return _timeBlocks.where((block) => block.taskId == taskId).toList();
   }
 
-  TaskProvider() {
+  TaskProvider({NotificationService? notifService}) {
+    if (notifService != null) {
+      _notifService = notifService;
+    }
     _init();
   }
+
+  @visibleForTesting
+  Future<void> init() async => _init();
 
   Future<void> _init() async {
     await _notifService.initialize();
@@ -576,7 +582,11 @@ class TaskProvider with ChangeNotifier {
   }
 
   Future<void> hapusTugas(String id) async {
-    await _notifService.cancelTaskNotifications(id);
+    try {
+      await _notifService.cancelTaskNotifications(id);
+    } catch (e) {
+      // Ignore notification cancellation errors to ensure task is deleted
+    }
     _timeBlocks.removeWhere((block) => block.taskId == id);
     _tasks.removeWhere((t) => t.id == id);
     _recalculateSAW();

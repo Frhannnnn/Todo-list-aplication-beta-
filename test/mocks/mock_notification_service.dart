@@ -1,8 +1,8 @@
-import 'package:mockito/mockito.dart';
 import 'package:tugasku/services/notification_service.dart';
 import 'package:tugasku/models/task_model.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-class MockNotificationService extends Mock implements NotificationService {
+class MockNotificationService implements NotificationService {
   @override
   Future<void> initialize() async {}
 
@@ -17,8 +17,8 @@ class MockNotificationService extends Mock implements NotificationService {
 
   @override
   Future<void> scheduleDailyReminder({
-    required int hour,
-    required int minute,
+    int hour = 8,
+    int minute = 0,
     required int activeTasks,
   }) async {}
 
@@ -26,12 +26,17 @@ class MockNotificationService extends Mock implements NotificationService {
   Future<void> cancelDailyReminder() async {}
 
   @override
-  Future<List<dynamic>> getPendingNotifications() async {
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
     return [];
   }
 
   @override
   Future<bool> requestPermission() async {
+    return true;
+  }
+
+  @override
+  Future<bool> areNotificationsEnabled() async {
     return true;
   }
 }

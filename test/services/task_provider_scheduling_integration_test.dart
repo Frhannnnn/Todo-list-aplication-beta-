@@ -15,9 +15,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/models/task_model.dart';
 import 'package:tugasku/models/schedule_config_model.dart';
 import 'package:tugasku/services/task_provider.dart';
+import '../mocks/mock_notification_service.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  
 
   setUp(() {
     // Mock the flutter_local_notifications plugin channel
@@ -59,17 +60,17 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 48));
 
         await provider.tambahTugas(
           namaTugas: 'Test Task',
-          mataKuliah: 'CS101',
+          lingkupTugas: 'CS101',
           deadline: deadline,
           tingkatKepentingan: 4,
-          tingkatUrgensi: 4,
+          
           estimasiWaktu: 3,
         );
 
@@ -91,17 +92,17 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 48));
 
         await provider.tambahTugas(
           namaTugas: 'Task A',
-          mataKuliah: 'CS101',
+          lingkupTugas: 'CS101',
           deadline: deadline,
           tingkatKepentingan: 5,
-          tingkatUrgensi: 5,
+          
           estimasiWaktu: 2,
         );
 
@@ -120,17 +121,17 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 72));
 
         await provider.tambahTugas(
           namaTugas: 'Edit Test',
-          mataKuliah: 'CS102',
+          lingkupTugas: 'CS102',
           deadline: deadline,
           tingkatKepentingan: 3,
-          tingkatUrgensi: 3,
+          
           estimasiWaktu: 2,
         );
 
@@ -152,17 +153,17 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 72));
 
         await provider.tambahTugas(
           namaTugas: 'Deadline Edit',
-          mataKuliah: 'CS103',
+          lingkupTugas: 'CS103',
           deadline: deadline,
           tingkatKepentingan: 4,
-          tingkatUrgensi: 4,
+          
           estimasiWaktu: 3,
         );
 
@@ -196,7 +197,7 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 48));
@@ -204,19 +205,19 @@ void main() {
         // Add two tasks
         await provider.tambahTugas(
           namaTugas: 'Task To Delete',
-          mataKuliah: 'CS104',
+          lingkupTugas: 'CS104',
           deadline: deadline,
           tingkatKepentingan: 5,
-          tingkatUrgensi: 5,
+          
           estimasiWaktu: 2,
         );
 
         await provider.tambahTugas(
           namaTugas: 'Task To Keep',
-          mataKuliah: 'CS104',
+          lingkupTugas: 'CS104',
           deadline: deadline,
           tingkatKepentingan: 3,
-          tingkatUrgensi: 3,
+          
           estimasiWaktu: 2,
         );
 
@@ -250,17 +251,17 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 48));
 
         await provider.tambahTugas(
           namaTugas: 'Complete Me',
-          mataKuliah: 'CS105',
+          lingkupTugas: 'CS105',
           deadline: deadline,
           tingkatKepentingan: 4,
-          tingkatUrgensi: 4,
+          
           estimasiWaktu: 3,
         );
 
@@ -282,7 +283,7 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 24));
@@ -290,20 +291,20 @@ void main() {
         // Add high-priority task
         await provider.tambahTugas(
           namaTugas: 'High Priority',
-          mataKuliah: 'CS106',
+          lingkupTugas: 'CS106',
           deadline: deadline,
           tingkatKepentingan: 5,
-          tingkatUrgensi: 5,
+          
           estimasiWaktu: 4,
         );
 
         // Add lower-priority task
         await provider.tambahTugas(
           namaTugas: 'Low Priority',
-          mataKuliah: 'CS106',
+          lingkupTugas: 'CS106',
           deadline: deadline,
           tingkatKepentingan: 2,
-          tingkatUrgensi: 2,
+          
           estimasiWaktu: 4,
         );
 
@@ -333,7 +334,7 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 72));
@@ -344,10 +345,10 @@ void main() {
         for (var i = 0; i < 10; i++) {
           await provider.tambahTugas(
             namaTugas: 'Timing Task $i',
-            mataKuliah: 'CS107',
+            lingkupTugas: 'CS107',
             deadline: deadline.add(Duration(hours: i * 12)),
             tingkatKepentingan: 1 + (i % 5),
-            tingkatUrgensi: 1 + (i % 5),
+
             estimasiWaktu: 1 + (i % 5),
           );
         }
@@ -375,17 +376,17 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 48));
 
         await provider.tambahTugas(
           namaTugas: 'SAW Sync Test',
-          mataKuliah: 'CS108',
+          lingkupTugas: 'CS108',
           deadline: deadline,
           tingkatKepentingan: 5,
-          tingkatUrgensi: 5,
+          
           estimasiWaktu: 2,
         );
 
@@ -409,7 +410,7 @@ void main() {
           'tugasku_schedule_config': jsonEncode(ScheduleConfig().toJson()),
         });
 
-        final provider = TaskProvider();
+        final provider = TaskProvider(notifService: MockNotificationService());
         await Future.delayed(const Duration(milliseconds: 200));
 
         final deadline = DateTime.now().add(const Duration(hours: 48));
@@ -417,10 +418,10 @@ void main() {
         // Add task
         await provider.tambahTugas(
           namaTugas: 'Flow Test',
-          mataKuliah: 'CS109',
+          lingkupTugas: 'CS109',
           deadline: deadline,
           tingkatKepentingan: 4,
-          tingkatUrgensi: 4,
+          
           estimasiWaktu: 2,
         );
 
@@ -452,3 +453,4 @@ void main() {
     });
   });
 }
+

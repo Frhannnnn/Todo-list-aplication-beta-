@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/services/task_provider.dart';
+import '../mocks/mock_notification_service.dart';
 import 'package:tugasku/models/task_model.dart';
 import 'package:tugasku/models/schedule_config_model.dart';
 import 'package:tugasku/models/time_block_model.dart';
@@ -10,12 +11,13 @@ void main() {
     late TaskProvider taskProvider;
 
     setUp(() async {
+      TestWidgetsFlutterBinding.ensureInitialized();
       // Clear all persisted data first
       SharedPreferences.setMockInitialValues({});
       
       // Initialize TaskProvider
-      taskProvider = TaskProvider();
-      await taskProvider._init();
+      taskProvider = TaskProvider(notifService: MockNotificationService());
+      await taskProvider.init();
     });
 
     tearDown(() async {
@@ -144,24 +146,24 @@ void main() {
       test('Skenario Update Config: Config ter-update', () async {
         // Arrange
         final newConfig = ScheduleConfig(
-          maxHoursPerDay: 6,
+          
           workStartHour: 9,
           workEndHour: 17,
-          bufferBetweenTasks: 15,
+          
         );
 
         // Act
         await taskProvider.updateScheduleConfig(newConfig);
 
         // Assert
-        expect(taskProvider.scheduleConfig.maxHoursPerDay, 6);
+        expect(taskProvider.scheduleConfig.workEndHour, 6);
         expect(taskProvider.scheduleConfig.workStartHour, 9);
       });
 
       test('Skenario Config Persistent: Config saved and loaded', () async {
         // Arrange
         final newConfig = ScheduleConfig(
-          maxHoursPerDay: 7,
+          
           workStartHour: 8,
           workEndHour: 18,
         );
@@ -170,17 +172,17 @@ void main() {
         await taskProvider.updateScheduleConfig(newConfig);
 
         // Act - Create new provider instance
-        final newProvider = TaskProvider();
-        await newProvider._init();
+        final newProvider = TaskProvider(notifService: MockNotificationService());
+        await newProvider.init();
 
         // Assert
-        expect(newProvider.scheduleConfig.maxHoursPerDay, 7);
+        expect(newProvider.scheduleConfig.workEndHour, 7);
       });
 
       test('Skenario Default Config: Default values', () async {
         // Assert
         expect(taskProvider.scheduleConfig, isNotNull);
-        expect(taskProvider.scheduleConfig.maxHoursPerDay, isNotNull);
+        expect(taskProvider.scheduleConfig.workEndHour, isNotNull);
       });
     });
 
@@ -411,3 +413,4 @@ void main() {
     });
   });
 }
+

@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/models/task_model.dart';
 import 'package:tugasku/services/task_provider.dart';
@@ -20,8 +19,8 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       
       // Initialize TaskProvider
-      taskProvider = TaskProvider();
-      await taskProvider._init();
+      taskProvider = TaskProvider(notifService: MockNotificationService());
+      await taskProvider.init();
       
       // Clear tasks before each test
       await taskProvider.clearAllTasks();
@@ -411,7 +410,7 @@ void main() {
         await taskProvider.updateStatus('invalid-id', TaskStatus.selesai);
 
         // Assert - Should not throw error and task should remain unchanged
-        expect(taskProvider.tasks.first.status, TaskStatus.pending);
+        expect(taskProvider.tasks.first.status, TaskStatus.belumDikerjakan);
       });
     });
 
@@ -485,7 +484,7 @@ void main() {
           await taskProvider.tambahTugas(
             namaTugas: 'Task $i',
             lingkupTugas: 'Scope',
-            deadline: DateTime.now().add(const Duration(days: i + 1)),
+            deadline: DateTime.now().add(Duration(days: i + 1)),
             tingkatKepentingan: 3,
             estimasiWaktu: 2,
           );
@@ -597,3 +596,4 @@ void main() {
     });
   });
 }
+

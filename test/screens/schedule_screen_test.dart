@@ -65,30 +65,31 @@ void main() {
 
   group('ScheduleColors.forCategory', () {
     test('returns blue for kuliah category', () {
-      final color = ScheduleColors.forCategory(TaskCategory.kuliah);
+      final color = ScheduleColors.forCategory('Tugas');
       expect(color, const Color(0xFF3B82F6));
     });
 
     test('returns green for praktikum category', () {
-      final color = ScheduleColors.forCategory(TaskCategory.praktikum);
+      final color = ScheduleColors.forCategory('Tugas');
       expect(color, const Color(0xFF10B981));
     });
 
     test('returns purple for project category', () {
-      final color = ScheduleColors.forCategory(TaskCategory.project);
+      final color = ScheduleColors.forCategory('Tugas');
       expect(color, const Color(0xFF8B5CF6));
     });
 
     test('returns gray for lainnya category', () {
-      final color = ScheduleColors.forCategory(TaskCategory.lainnya);
+      final color = ScheduleColors.forCategory('Tugas');
       expect(color, const Color(0xFF6B7280));
     });
 
     test('each category has a distinct color', () {
-      final colors = TaskCategory.values
+      final categories = ['Tugas', 'Ujian', 'Proyek', 'Presentasi'];
+      final colors = categories
           .map((c) => ScheduleColors.forCategory(c))
           .toSet();
-      expect(colors.length, TaskCategory.values.length);
+      expect(colors.length, categories.length);
     });
   });
 
