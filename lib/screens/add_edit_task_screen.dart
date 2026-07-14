@@ -18,9 +18,15 @@ class AddEditTaskScreen extends StatefulWidget {
 }
 
 class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
+  // Lingkup yang memunculkan kolom Mata Kuliah. Pencocokan literal by design
+  // (lihat issue.md #2) — kalau nanti dibutuhkan penanda "lingkup akademik"
+  // per-lingkup yang custom-renameable, ganti pengecekan ini.
+  static const String _kAkademikScope = 'Perkuliahan';
+
   final _formKey = GlobalKey<FormState>();
   final _namaTugasCtrl = TextEditingController();
   final _catatanCtrl = TextEditingController();
+  final _mataKuliahCtrl = TextEditingController();
 
   DateTime _deadline = DateTime.now().add(const Duration(days: 7));
   int _kepentingan = 3;
@@ -32,6 +38,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   List<String> _notifSchedule = ['h-1', '3jam', 'deadline'];
 
   bool get isEdit => widget.task != null;
+  bool get _isAkademik => _lingkupTugas == _kAkademikScope;
 
   @override
   void initState() {
@@ -40,6 +47,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       final t = widget.task!;
       _namaTugasCtrl.text = t.namaTugas;
       _catatanCtrl.text = t.catatan ?? '';
+      _mataKuliahCtrl.text = t.mataKuliah ?? '';
       _deadline = t.deadline;
       _kepentingan = t.tingkatKepentingan;
       _estimasiWaktu = t.estimasiWaktu;
@@ -63,6 +71,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   void dispose() {
     _namaTugasCtrl.dispose();
     _catatanCtrl.dispose();
+    _mataKuliahCtrl.dispose();
     super.dispose();
   }
 
@@ -116,6 +125,11 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                           v!.isEmpty ? 'Wajib diisi' : null),
                   const SizedBox(height: 12),
                   _buildLingkupDropdown(provider),
+                  if (_isAkademik) ...[
+                    const SizedBox(height: 12),
+                    _buildTextField(
+                        _mataKuliahCtrl, 'Mata Kuliah', Icons.menu_book),
+                  ],
                 ]),
                 const SizedBox(height: 16),
                 _buildSection('Deadline', [
@@ -866,6 +880,10 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     }
 
     final provider = context.read<TaskProvider>();
+    final mataKuliah =
+        _isAkademik && _mataKuliahCtrl.text.trim().isNotEmpty
+            ? _mataKuliahCtrl.text.trim()
+            : null;
     bool saved;
 
     if (isEdit) {
@@ -873,6 +891,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         widget.task!.id,
         namaTugas: _namaTugasCtrl.text.trim(),
         lingkupTugas: _lingkupTugas,
+        mataKuliah: mataKuliah,
+        clearMataKuliah: mataKuliah == null,
         deadline: _deadline,
         tingkatKepentingan: _kepentingan,
         estimasiWaktu: _estimasiWaktu,
@@ -886,6 +906,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       saved = await provider.tambahTugas(
         namaTugas: _namaTugasCtrl.text.trim(),
         lingkupTugas: _lingkupTugas,
+        mataKuliah: mataKuliah,
         deadline: _deadline,
         tingkatKepentingan: _kepentingan,
         estimasiWaktu: _estimasiWaktu,
