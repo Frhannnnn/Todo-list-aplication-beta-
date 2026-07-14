@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../services/task_provider.dart';
 import '../models/task_model.dart';
 import '../utils/app_theme.dart';
+import '../main.dart';
 import 'ai_task_creator_screen.dart';
 
 class AddEditTaskScreen extends StatefulWidget {
@@ -865,9 +866,10 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     }
 
     final provider = context.read<TaskProvider>();
+    bool saved;
 
     if (isEdit) {
-      await provider.editTugas(
+      saved = await provider.editTugas(
         widget.task!.id,
         namaTugas: _namaTugasCtrl.text.trim(),
         lingkupTugas: _lingkupTugas,
@@ -881,7 +883,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         notifSchedule: _notifSchedule,
       );
     } else {
-      await provider.tambahTugas(
+      saved = await provider.tambahTugas(
         namaTugas: _namaTugasCtrl.text.trim(),
         lingkupTugas: _lingkupTugas,
         deadline: _deadline,
@@ -894,17 +896,20 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       );
     }
 
-    if (mounted) {
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isEdit
-              ? 'Tugas berhasil diperbarui'
-              : 'Tugas berhasil ditambahkan'),
-          backgroundColor: AppTheme.success,
-        ),
-      );
-    }
+    if (!saved || !mounted) return;
+
+    // Selalu kembali ke tab "Data Tugas" apa pun layar asal form ini dibuka
+    // (FAB di TaskListScreen/CalendarScreen, atau tap-to-edit di manapun).
+    MainNavigation.tabIndex.value = MainNavigation.taskListTab;
+    Navigator.popUntil(context, (route) => route.isFirst);
+    rootScaffoldMessengerKey.currentState?.showSnackBar(
+      SnackBar(
+        content: Text(isEdit
+            ? 'Tugas berhasil diperbarui'
+            : 'Tugas berhasil ditambahkan'),
+        backgroundColor: AppTheme.success,
+      ),
+    );
   }
 
   void _confirmDelete() {
@@ -920,10 +925,19 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           ElevatedButton(
             style:
                 ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            onPressed: () {
-              context.read<TaskProvider>().hapusTugas(widget.task!.id);
-              Navigator.pop(c);
-              Navigator.pop(context);
+            onPressed: () async {
+              final provider = context.read<TaskProvider>();
+              final deleted = await provider.hapusTugas(widget.task!.id);
+              if (c.mounted) Navigator.pop(c);
+              if (!deleted || !mounted) return;
+              MainNavigation.tabIndex.value = MainNavigation.taskListTab;
+              Navigator.popUntil(context, (route) => route.isFirst);
+              rootScaffoldMessengerKey.currentState?.showSnackBar(
+                const SnackBar(
+                  content: Text('Tugas berhasil dihapus'),
+                  backgroundColor: AppTheme.danger,
+                ),
+              );
             },
             child: const Text('Hapus'),
           ),
