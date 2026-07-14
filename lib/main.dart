@@ -13,6 +13,11 @@ import 'screens/priority_screen.dart';
 import 'screens/schedule_screen.dart';
 import 'screens/settings_screen.dart';
 
+/// Kunci global supaya SnackBar bisa ditampilkan dari layar mana pun,
+/// termasuk setelah Navigator.pop() berpindah ke layar lain (mis. setelah
+/// simpan/hapus tugas dari AddEditTaskScreen kembali ke tab Data Tugas).
+final rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
@@ -35,6 +40,7 @@ class TugasKuApp extends StatelessWidget {
       child: MaterialApp(
         title: 'TugasKu',
         debugShowCheckedModeBanner: false,
+        scaffoldMessengerKey: rootScaffoldMessengerKey,
         theme: AppTheme.theme,
         home: const MainNavigation(),
       ),
@@ -45,13 +51,19 @@ class TugasKuApp extends StatelessWidget {
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
 
+  /// Tab aktif di IndexedStack. Layar lain (mis. AddEditTaskScreen) bisa
+  /// memaksa pindah tab sebelum pop, tanpa perlu named routes.
+  static final ValueNotifier<int> tabIndex = ValueNotifier<int>(0);
+
+  static const int dashboardTab = 0;
+  static const int taskListTab = 1;
+
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
-  int _currentIndex = 0;
-
+class _MainNavigationState extends State<MainNavigation>
+    with WidgetsBindingObserver {
   final List<Widget> _screens = const [
     DashboardScreen(),
     TaskListScreen(),
@@ -62,9 +74,34 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    MainNavigation.tabIndex.addListener(_onTabIndexChanged);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    MainNavigation.tabIndex.removeListener(_onTabIndexChanged);
+    super.dispose();
+  }
+
+  void _onTabIndexChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      context.read<TaskProvider>().refreshUrgensi();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: IndexedStack(index: MainNavigation.tabIndex.value, children: _screens),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
@@ -95,9 +132,9 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   Widget _navItem(int index, IconData icon, IconData activeIcon, String label) {
-    final isActive = _currentIndex == index;
+    final isActive = MainNavigation.tabIndex.value == index;
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () => MainNavigation.tabIndex.value = index,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
