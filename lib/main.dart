@@ -1,5 +1,6 @@
 // lib/main.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -73,17 +74,29 @@ class _MainNavigationState extends State<MainNavigation>
     SettingsScreen(),
   ];
 
+  Timer? _refreshUrgensiTimer;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     MainNavigation.tabIndex.addListener(_onTabIndexChanged);
+    // Issue #10: refresh urgensi/ranking berkala selama app terbuka, supaya
+    // label seperti "Masih Aman" tidak basi kalau app dibiarkan terbuka
+    // lama. Sengaja jadi tanggung jawab layar (bukan TaskProvider) supaya
+    // unit/widget test yang membuat TaskProvider() langsung tanpa memount
+    // MainNavigation tidak ikut kena timer yang tidak pernah di-cancel.
+    _refreshUrgensiTimer = Timer.periodic(
+      const Duration(minutes: 5),
+      (_) => context.read<TaskProvider>().refreshUrgensi(),
+    );
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     MainNavigation.tabIndex.removeListener(_onTabIndexChanged);
+    _refreshUrgensiTimer?.cancel();
     super.dispose();
   }
 
