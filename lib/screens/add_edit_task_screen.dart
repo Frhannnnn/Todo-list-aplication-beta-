@@ -7,6 +7,7 @@ import '../services/task_provider.dart';
 import '../models/task_model.dart';
 import '../utils/app_theme.dart';
 import '../main.dart';
+import '../widgets/rename_dialog.dart';
 import 'ai_task_creator_screen.dart';
 
 class AddEditTaskScreen extends StatefulWidget {
@@ -257,7 +258,18 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                     value: s,
                     child: Text(s, overflow: TextOverflow.ellipsis)))
                 .toList(),
-            onChanged: (v) => setState(() => _lingkupTugas = v!),
+            onChanged: (v) {
+              if (v == null) return;
+              setState(() {
+                _lingkupTugas = v;
+                // Kategori independen per lingkup (Issue #4) — reset ke
+                // kategori pertama milik lingkup baru saat lingkup diganti.
+                final catsForNewScope = provider.categoriesForScope(v);
+                _category = catsForNewScope.isNotEmpty
+                    ? catsForNewScope.first
+                    : '';
+              });
+            },
           ),
         ),
         const SizedBox(width: 8),
@@ -290,13 +302,32 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   }
 
   Widget _buildKategoriDropdown(TaskProvider provider) {
-    // ignore: deprecated_member_use_from_same_package
-    final categories = provider.customCategories;
+    // Kategori independen per lingkup (Issue #4) — hanya kategori milik
+    // _lingkupTugas yang sedang aktif yang ditampilkan.
+    final categories = provider.categoriesForScope(_lingkupTugas);
 
-    // Bug #9 Fix: Ensure _category is always valid by forcing valid category
     String validCategory = _category;
     if (categories.isNotEmpty && !categories.contains(_category)) {
       validCategory = categories.first;
+    }
+
+    if (categories.isEmpty) {
+      return Row(
+        children: [
+          const Icon(Icons.category_outlined,
+              color: AppTheme.primary, size: 20),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Belum ada kategori untuk lingkup ini.',
+                style:
+                    TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => _showAddCategoryDialog(provider),
+            child: const Text('Tambah'),
+          ),
+        ],
+      );
     }
 
     return Row(
@@ -324,6 +355,11 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           tooltip: 'Tambah kategori baru',
           onPressed: () => _showAddCategoryDialog(provider),
         ),
+        IconButton(
+          icon: const Icon(Icons.tune_rounded, color: AppTheme.textSecondary),
+          tooltip: 'Kelola kategori lingkup ini',
+          onPressed: () => _showCategoryManagerSheet(provider),
+        ),
       ],
     );
   }
@@ -335,13 +371,30 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       builder: (_) => _AddNameDialog(
         title: 'Tambah Kategori',
         hint: 'Nama kategori...',
-        // ignore: deprecated_member_use_from_same_package
-        onSubmit: (text) => provider.addCategory(text),
+        onSubmit: (text) => provider.addCategoryToScope(_lingkupTugas, text),
       ),
     );
     if (result != null && mounted) {
       setState(() => _category = result);
     }
+  }
+
+  void _showCategoryManagerSheet(TaskProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _CategoryManagerSheet(
+        provider: provider,
+        scope: _lingkupTugas,
+        currentCategory: _category,
+        onCategoriesChanged: (validCategory) {
+          if (mounted) setState(() => _category = validCategory);
+        },
+      ),
+    );
   }
 
   Widget _buildDeadlinePicker() {
@@ -1062,5 +1115,214 @@ class _AddNameDialogState extends State<_AddNameDialog> {
         ),
       ],
     );
+  }
+}
+
+/// Bottom sheet "Kelola Kategori" — kategori di sini selalu milik satu
+/// [scope] tertentu (Issue #4: kategori independen per lingkup, tidak
+/// dibagi-pakai). Mendukung tambah, ganti nama (cascade ke semua tugas di
+/// lingkup ini), dan hapus.
+class _CategoryManagerSheet extends StatefulWidget {
+  final TaskProvider provider;
+  final String scope;
+  final String currentCategory;
+  final ValueChanged<String> onCategoriesChanged;
+
+  const _CategoryManagerSheet({
+    required this.provider,
+    required this.scope,
+    required this.currentCategory,
+    required this.onCategoriesChanged,
+  });
+
+  @override
+  State<_CategoryManagerSheet> createState() => _CategoryManagerSheetState();
+}
+
+class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
+  final _ctrl = TextEditingController();
+  late String _trackedCategory = widget.currentCategory;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = widget.provider.categoriesForScope(widget.scope);
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Kelola Kategori',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Kategori khusus untuk lingkup "${widget.scope}" — tidak dibagi dengan lingkup lain.',
+              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 16),
+            if (categories.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  'Belum ada kategori. Tambahkan di bawah.',
+                  style: TextStyle(color: AppTheme.textSecondary),
+                ),
+              )
+            else
+              ...categories.map((cat) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.category_outlined,
+                          color: AppTheme.primary, size: 18),
+                    ),
+                    title: Text(cat,
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w500)),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined,
+                              color: AppTheme.textSecondary, size: 20),
+                          tooltip: 'Ganti nama',
+                          onPressed: () => _renameCategory(cat),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded,
+                              color: AppTheme.danger, size: 20),
+                          tooltip: 'Hapus',
+                          onPressed: () => _deleteCategory(cat),
+                        ),
+                      ],
+                    ),
+                  )),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ctrl,
+                    decoration: InputDecoration(
+                      hintText: 'Nama kategori baru...',
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                            color: AppTheme.primary, width: 1.5),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    onSubmitted: (_) => _addCategory(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _addCategory,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  child: const Text('Tambah'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addCategory() {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) return;
+    widget.provider.addCategoryToScope(widget.scope, text);
+    _ctrl.clear();
+    setState(() {});
+    _syncSelection();
+  }
+
+  Future<void> _deleteCategory(String cat) async {
+    await widget.provider.removeCategoryFromScope(widget.scope, cat);
+    if (!mounted) return;
+    setState(() {});
+    _syncSelection();
+  }
+
+  Future<void> _renameCategory(String oldCat) async {
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => RenameDialog(
+        title: 'Ganti Nama Kategori',
+        initialValue: oldCat,
+        onSubmit: (newName) => widget.provider
+            .renameCategoryInScope(widget.scope, oldCat, newName),
+      ),
+    );
+    if (result != null && mounted) {
+      // Kalau yang di-rename adalah kategori yang sedang dipilih di form,
+      // ikutkan supaya form tetap menunjuk kategori yang sama (nama baru).
+      if (_trackedCategory == oldCat) _trackedCategory = result;
+      setState(() {});
+      _syncSelection();
+    }
+  }
+
+  /// Pastikan kategori yang sedang "dipegang" tetap valid (masih ada di
+  /// daftar kategori lingkup ini); kalau sudah dihapus, jatuh ke kategori
+  /// pertama yang tersisa. Kategori lain yang tidak terkait tidak
+  /// memengaruhi pilihan form sama sekali.
+  void _syncSelection() {
+    final categories = widget.provider.categoriesForScope(widget.scope);
+    if (!categories.contains(_trackedCategory)) {
+      _trackedCategory = categories.isNotEmpty ? categories.first : '';
+    }
+    widget.onCategoriesChanged(_trackedCategory);
   }
 }

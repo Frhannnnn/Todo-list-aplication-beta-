@@ -50,16 +50,6 @@ class TaskProvider with ChangeNotifier {
   List<String> categoriesForScope(String scope) =>
       List.unmodifiable(_categoriesByScope[scope] ?? const []);
 
-  /// @deprecated Kategori kini per-lingkup. Dipertahankan sementara sebagai
-  /// alias ke lingkup pertama supaya kode lama yang belum dimigrasi tetap
-  /// kompilasi; akan dihapus setelah semua pemanggil pindah ke
-  /// [categoriesForScope]/[addCategoryToScope].
-  @Deprecated('Gunakan categoriesForScope(scope)')
-  List<String> get customCategories => categoriesForScope(_defaultScopeKey);
-
-  String get _defaultScopeKey =>
-      _customScopes.isNotEmpty ? _customScopes.first : '';
-
   List<Task> get tasks => _tasks;
 
   List<Task> get activeTasks =>
@@ -309,14 +299,6 @@ class TaskProvider with ChangeNotifier {
     notifyListeners();
     return true;
   }
-
-  @Deprecated('Gunakan addCategoryToScope(scope, category)')
-  Future<void> addCategory(String category) =>
-      addCategoryToScope(_defaultScopeKey, category);
-
-  @Deprecated('Gunakan removeCategoryFromScope(scope, category)')
-  Future<void> removeCategory(String category) =>
-      removeCategoryFromScope(_defaultScopeKey, category);
 
   // ─────────────────────────────────────────────
   // NOTIFIKASI GLOBAL (daily reminder & izin)
