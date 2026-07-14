@@ -470,17 +470,6 @@ void main() {
             estimasiWaktu: 2,
           );
 
-          // Create a block for this task
-          final originalSlot = DateTime(
-            now.year, now.month, now.day, now.hour + 2,
-          );
-          final block = TimeBlock(
-            id: 'block-deadline-$i',
-            taskId: task.id,
-            startTime: originalSlot,
-            endTime: originalSlot.add(const Duration(hours: 1)),
-          );
-
           // Target slot is at or after deadline
           final pastDeadlineHours = rng.nextInt(10); // 0 = at deadline, >0 = after
           final targetSlot = DateTime(
@@ -638,16 +627,6 @@ void main() {
             config: config,
             now: now,
           );
-
-          final slotsUsedByA = resultBefore.timeBlocks
-              .where((b) => b.taskId == taskA.id)
-              .map((b) => DateTime(
-                    b.startTime.year,
-                    b.startTime.month,
-                    b.startTime.day,
-                    b.startTime.hour,
-                  ))
-              .toSet();
 
           // Now mark task A as complete and reschedule only task B
           final resultAfter = scheduler.rescheduleAll(

@@ -10,7 +10,6 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:tugasku/models/task_model.dart';
 import 'package:tugasku/models/time_block_model.dart';
 import 'package:tugasku/models/schedule_config_model.dart';
 import 'package:tugasku/services/task_provider.dart';
@@ -243,7 +242,6 @@ void main() {
 
       final task = provider.activeTasks.first;
       final originalSawScore = task.sawScore;
-      final originalBlocks = provider.getTimeBlocksForTask(task.id).length;
 
       // Measure time for edit → SAW recalculation → rescheduling
       final stopwatch = Stopwatch()..start();
@@ -635,8 +633,6 @@ Makalah Etika Profesi tentang AI
         
         estimasiWaktu: 3,
       );
-
-      final blocksBefore = List<TimeBlock>.from(provider.timeBlocks);
 
       // Update config to different work hours
       final newConfig = ScheduleConfig(

@@ -2,19 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/models/task_model.dart';
 import 'package:tugasku/services/task_provider.dart';
-import 'package:tugasku/services/notification_service.dart';
 
 import '../mocks/mock_notification_service.dart';
 
 void main() {
   group('TaskProvider - CRUD Operations', () {
     late TaskProvider taskProvider;
-    late MockNotificationService mockNotifService;
 
     setUp(() async {
-      // Setup mock notification service
-      mockNotifService = MockNotificationService();
-      
       // Clear all persisted data first
       SharedPreferences.setMockInitialValues({});
       

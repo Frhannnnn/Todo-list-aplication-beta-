@@ -4,7 +4,6 @@ import 'package:tugasku/services/task_provider.dart';
 import '../mocks/mock_notification_service.dart';
 import 'package:tugasku/models/task_model.dart';
 import 'package:tugasku/models/schedule_config_model.dart';
-import 'package:tugasku/models/time_block_model.dart';
 
 void main() {
   group('TaskProvider - Schedule/Time Block Management', () {
@@ -385,7 +384,6 @@ void main() {
 
         // Assert
         expect(blocksForDate, isNotNull);
-        expect(blocksForDate is List, true);
       });
 
       test('Skenario getTimeBlocksForTask: Get blocks for specific task', () async {
@@ -408,7 +406,6 @@ void main() {
 
         // Assert
         expect(blocksForTask, isNotNull);
-        expect(blocksForTask is List, true);
       });
     });
   });

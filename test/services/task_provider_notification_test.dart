@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/services/task_provider.dart';
 import '../mocks/mock_notification_service.dart';
-import 'package:tugasku/models/task_model.dart';
 
 void main() {
   group('TaskProvider - Notification Settings Management', () {
@@ -161,7 +160,6 @@ void main() {
 
         // Assert
         expect(pendingNotifications, isNotNull);
-        expect(pendingNotifications is List, true);
       });
 
       test('Skenario Get Pending: Empty when no notifications', () async {
