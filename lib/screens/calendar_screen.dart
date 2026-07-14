@@ -281,32 +281,49 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Widget _buildEmptyDay() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(AppAssets.emptyCalendar, width: 140, height: 105),
-            const SizedBox(height: 16),
-            Text(
-              'Tidak ada deadline pada ${DateFormat('d MMMM', 'id_ID').format(_selectedDate)}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+    // Empty-state ini berada di dalam Expanded dengan tinggi tetap. Di
+    // viewport pendek, tinggi ilustrasi + teks bisa melebihi ruang yang
+    // tersedia dan menyebabkan RenderFlex overflow. Pola LayoutBuilder +
+    // SingleChildScrollView + ConstrainedBox(minHeight) menjaga konten tetap
+    // ter-center saat ruang cukup, dan bisa di-scroll saat ruang sempit —
+    // jadi tidak pernah meluap.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(AppAssets.emptyCalendar,
+                        width: 140, height: 105),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Tidak ada deadline pada ${DateFormat('d MMMM', 'id_ID').format(_selectedDate)}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Pilih tanggal lain atau tambah tugas baru.',
+                      textAlign: TextAlign.center,
+                      style:
+                          TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 6),
-            const Text(
-              'Pilih tanggal lain atau tambah tugas baru.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
