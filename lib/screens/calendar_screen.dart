@@ -7,6 +7,7 @@ import '../services/task_provider.dart';
 import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
 import '../widgets/task_card_widget.dart';
+import '../utils/task_status_actions.dart';
 import 'add_edit_task_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -66,8 +67,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                   builder: (_) => AddEditTaskScreen(task: task),
                                 ),
                               ),
-                              onStatusChange: (status) =>
-                                  provider.updateStatus(task.id, status),
+                              onStatusChange: (status) => handleStatusChange(
+                                  context, provider, task, status),
                             );
                           },
                         ),

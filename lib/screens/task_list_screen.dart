@@ -7,6 +7,7 @@ import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
 import '../widgets/task_card_widget.dart';
 import '../widgets/rename_dialog.dart';
+import '../utils/task_status_actions.dart';
 import 'add_edit_task_screen.dart';
 
 class TaskListScreen extends StatefulWidget {
@@ -328,7 +329,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
           onDelete: () => _confirmDelete(context, provider, task),
           onStatusChange: (status) =>
-              provider.updateStatus(task.id, status),
+              handleStatusChange(context, provider, task, status),
         );
       },
     );
