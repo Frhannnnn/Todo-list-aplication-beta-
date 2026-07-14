@@ -358,6 +358,13 @@ class _TaskListScreenState extends State<TaskListScreen> {
                       ? 'Tugas berhasil dihapus'
                       : 'Gagal menghapus — coba lagi'),
                   backgroundColor: AppTheme.danger,
+                  action: deleted
+                      ? SnackBarAction(
+                          label: 'Urungkan',
+                          textColor: Colors.white,
+                          onPressed: () => provider.restoreTugas(task),
+                        )
+                      : null,
                 ),
               );
             },

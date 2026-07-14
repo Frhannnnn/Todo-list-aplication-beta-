@@ -1014,7 +1014,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () async {
               final provider = context.read<TaskProvider>();
-              final deleted = await provider.hapusTugas(widget.task!.id);
+              final deletedTask = widget.task!;
+              final deleted = await provider.hapusTugas(deletedTask.id);
               if (c.mounted) Navigator.pop(c);
               if (!mounted) return;
 
@@ -1032,9 +1033,14 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
               MainNavigation.tabIndex.value = MainNavigation.taskListTab;
               Navigator.popUntil(context, (route) => route.isFirst);
               rootScaffoldMessengerKey.currentState?.showSnackBar(
-                const SnackBar(
-                  content: Text('Tugas berhasil dihapus'),
+                SnackBar(
+                  content: const Text('Tugas berhasil dihapus'),
                   backgroundColor: AppTheme.danger,
+                  action: SnackBarAction(
+                    label: 'Urungkan',
+                    textColor: Colors.white,
+                    onPressed: () => provider.restoreTugas(deletedTask),
+                  ),
                 ),
               );
             },
