@@ -1,7 +1,10 @@
 // lib/screens/settings_screen.dart
 
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/task_provider.dart';
 import '../utils/app_theme.dart';
 import 'notification_settings_screen.dart';
@@ -36,6 +39,8 @@ class SettingsScreen extends StatelessWidget {
             _buildScheduleSettingsCard(context),
             const SizedBox(height: 16),
             _buildSAWInfoCard(),
+            const SizedBox(height: 16),
+            _buildDataCard(context),
             const SizedBox(height: 16),
             _buildDangerZone(context),
           ],
@@ -240,6 +245,154 @@ class SettingsScreen extends StatelessWidget {
       _buildKriteriaRow('Tingkat Kepentingan', '40%', AppTheme.warning),
       _buildKriteriaRow('Estimasi Waktu', '20%', AppTheme.success),
     ]);
+  }
+
+  Widget _buildDataCard(BuildContext context) {
+    return _buildCard('Ekspor & Impor Data', Icons.import_export_rounded, [
+      const Text(
+        'Simpan cadangan seluruh data (tugas, lingkup, kategori, jadwal) ke file, atau pulihkan dari cadangan sebelumnya.',
+        style: TextStyle(
+            fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
+      ),
+      const SizedBox(height: 14),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.primary,
+                side: const BorderSide(color: AppTheme.primary),
+                shape:
+                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.upload_rounded, size: 18),
+              label: const Text('Ekspor'),
+              onPressed: () => _exportData(context),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.accent,
+                side: const BorderSide(color: AppTheme.accent),
+                shape:
+                    RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              icon: const Icon(Icons.download_rounded, size: 18),
+              label: const Text('Impor'),
+              onPressed: () => _importData(context),
+            ),
+          ),
+        ],
+      ),
+    ]);
+  }
+
+  Future<void> _exportData(BuildContext context) async {
+    final provider = context.read<TaskProvider>();
+    try {
+      final data = provider.exportData();
+      final jsonStr = const JsonEncoder.withIndent('  ').convert(data);
+      final bytes = utf8.encode(jsonStr);
+      final timestamp =
+          DateTime.now().toIso8601String().replaceAll(RegExp(r'[:.]'), '-');
+      final file = XFile.fromData(
+        bytes,
+        mimeType: 'application/json',
+        name: 'tugasku_backup_$timestamp.json',
+      );
+      await Share.shareXFiles([file], text: 'Cadangan data TugasKu');
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Gagal ekspor: $e'),
+              backgroundColor: AppTheme.danger),
+        );
+      }
+    }
+  }
+
+  Future<void> _importData(BuildContext context) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['json'],
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final bytes = result.files.single.bytes;
+      if (bytes == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Tidak bisa membaca file'),
+                backgroundColor: AppTheme.danger),
+          );
+        }
+        return;
+      }
+
+      final Map<String, dynamic> decoded;
+      try {
+        decoded = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('File bukan cadangan TugasKu yang valid'),
+                backgroundColor: AppTheme.danger),
+          );
+        }
+        return;
+      }
+
+      if (!context.mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (c) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Impor Data'),
+          content: const Text(
+              'Semua data saat ini akan DIGANTIKAN oleh isi file ini. Lanjutkan?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(c, false),
+                child: const Text('Batal')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Ganti Data'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+
+      final provider = context.read<TaskProvider>();
+      final outcome = await provider.importData(decoded);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(outcome.success
+              ? 'Data berhasil dipulihkan'
+              : (outcome.error ?? 'Gagal impor data')),
+          backgroundColor: outcome.success ? AppTheme.success : AppTheme.danger,
+        ),
+      );
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Gagal impor: $e'),
+              backgroundColor: AppTheme.danger),
+        );
+      }
+    }
   }
 
   Widget _buildDangerZone(BuildContext context) {

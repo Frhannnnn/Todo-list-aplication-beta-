@@ -787,4 +787,115 @@ class TaskProvider with ChangeNotifier {
     await _saveTasks();
     notifyListeners();
   }
+
+  // ─────────────────────────────────────────────
+  // EKSPOR & IMPOR DATA (Issue #6)
+  // ─────────────────────────────────────────────
+
+  static const int _exportFormatVersion = 1;
+
+  /// Bundel seluruh data pengguna (tugas, lingkup, kategori per-lingkup,
+  /// konfigurasi jadwal, pengaturan notifikasi) jadi satu Map siap
+  /// di-jsonEncode. Dipakai untuk backup manual sebelum ganti perangkat
+  /// atau uninstall.
+  Map<String, dynamic> exportData() {
+    return {
+      'formatVersion': _exportFormatVersion,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'tasks': _tasks.map((t) => t.toJson()).toList(),
+      'customScopes': _customScopes,
+      'categoriesByScope': _categoriesByScope,
+      'scheduleConfig': _scheduleConfig.toJson(),
+      'notifSettings': {
+        'notifEnabled': _notifEnabled,
+        'dailyReminderEnabled': _dailyReminderEnabled,
+        'dailyReminderHour': _dailyReminderHour,
+        'dailyReminderMinute': _dailyReminderMinute,
+      },
+    };
+  }
+
+  /// Terapkan data hasil ekspor, MENGGANTIKAN seluruh data saat ini.
+  /// Parsing dilakukan ke variabel lokal dulu — kalau ADA bagian yang
+  /// gagal/tidak valid, seluruh proses dibatalkan dan data yang sedang
+  /// berjalan tidak tersentuh sama sekali (tidak ada penerapan sebagian).
+  Future<({bool success, String? error})> importData(
+    Map<String, dynamic> json,
+  ) async {
+    try {
+      final version = json['formatVersion'];
+      if (version is! int || version > _exportFormatVersion) {
+        return (
+          success: false,
+          error: 'Format file tidak dikenali atau berasal dari versi aplikasi yang lebih baru.'
+        );
+      }
+
+      final rawTasks = json['tasks'];
+      final rawScopes = json['customScopes'];
+      final rawCategories = json['categoriesByScope'];
+      if (rawTasks is! List || rawScopes is! List || rawCategories is! Map) {
+        return (success: false, error: 'Struktur file tidak lengkap atau rusak.');
+      }
+
+      final newTasks = rawTasks
+          .map((t) => Task.fromJson(t as Map<String, dynamic>))
+          .toList();
+      final newScopes = List<String>.from(rawScopes);
+      final newCategories = rawCategories.map(
+        (scope, cats) =>
+            MapEntry(scope as String, List<String>.from(cats as List)),
+      );
+
+      ScheduleConfig? newScheduleConfig;
+      final rawConfig = json['scheduleConfig'];
+      if (rawConfig is Map<String, dynamic>) {
+        newScheduleConfig = ScheduleConfig.fromJson(rawConfig);
+      }
+
+      final rawNotif = json['notifSettings'];
+      var newNotifEnabled = _notifEnabled;
+      var newDailyReminderEnabled = _dailyReminderEnabled;
+      var newDailyReminderHour = _dailyReminderHour;
+      var newDailyReminderMinute = _dailyReminderMinute;
+      if (rawNotif is Map<String, dynamic>) {
+        newNotifEnabled = rawNotif['notifEnabled'] as bool? ?? newNotifEnabled;
+        newDailyReminderEnabled =
+            rawNotif['dailyReminderEnabled'] as bool? ?? newDailyReminderEnabled;
+        newDailyReminderHour =
+            rawNotif['dailyReminderHour'] as int? ?? newDailyReminderHour;
+        newDailyReminderMinute =
+            rawNotif['dailyReminderMinute'] as int? ?? newDailyReminderMinute;
+      }
+
+      // Semua berhasil di-parse — baru terapkan.
+      await _notifService.cancelAllNotifications();
+      _tasks = newTasks;
+      _customScopes = newScopes;
+      _categoriesByScope = newCategories;
+      if (newScheduleConfig != null) _scheduleConfig = newScheduleConfig;
+      _notifEnabled = newNotifEnabled;
+      _dailyReminderEnabled = newDailyReminderEnabled;
+      _dailyReminderHour = newDailyReminderHour;
+      _dailyReminderMinute = newDailyReminderMinute;
+
+      _recalculateSAW();
+      await _runScheduler();
+      await _saveTasks();
+      await _saveCustomData();
+      await _saveSchedule();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('notif_enabled', _notifEnabled);
+      await prefs.setBool('daily_reminder_enabled', _dailyReminderEnabled);
+      await prefs.setInt('daily_reminder_hour', _dailyReminderHour);
+      await prefs.setInt('daily_reminder_minute', _dailyReminderMinute);
+      if (_notifEnabled) await _rescheduleAllNotifications();
+
+      notifyListeners();
+      return (success: true, error: null);
+    } catch (e) {
+      return (success: false, error: 'Gagal membaca file: $e');
+    }
+  }
 }
