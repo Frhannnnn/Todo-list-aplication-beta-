@@ -29,10 +29,6 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   TaskStatus _status = TaskStatus.belumDikerjakan;
   bool _notifEnabled = true;
   List<String> _notifSchedule = ['h-1', '3jam', 'deadline'];
-  
-  // Bug #3 Fix: State variables for loading (moved inside class)
-  bool _isAddingScope = false;
-  bool _isAddingCategory = false;
 
   bool get isEdit => widget.task != null;
 
@@ -236,12 +232,15 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         Expanded(
           child: DropdownButtonFormField<String>(
             initialValue: _lingkupTugas,
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Lingkup Tugas',
               prefixIcon: Icon(Icons.label_outline, color: AppTheme.primary),
             ),
             items: scopes
-                .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                .map((s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s, overflow: TextOverflow.ellipsis)))
                 .toList(),
             onChanged: (v) => setState(() => _lingkupTugas = v!),
           ),
@@ -256,77 +255,27 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
-  // Bug #3 Fix: Simplified version dengan barrierDismissible: false
+  // Bug #3 Fix: dialog dipisah jadi StatefulWidget sendiri (lihat _AddNameDialog)
+  // supaya siklus hidupnya tidak bersilangan dengan setState() layar induk —
+  // itulah akar penyebab "Assertion failed: _dependents.isEmpty" / "Tried to
+  // build dirty widget in the wrong build scope" yang muncul sebelumnya.
   Future<void> _showAddScopeDialog(TaskProvider provider) async {
-    if (_isAddingScope) return; // Prevent double-tap
-    
-    final ctrl = TextEditingController();
-    
-    await showDialog(
+    final result = await showDialog<String>(
       context: context,
-      barrierDismissible: false, // Prevent dismiss while loading
-      builder: (c) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Tambah Lingkup Tugas'),
-          content: TextField(
-            controller: ctrl,
-            autofocus: true,
-            enabled: !_isAddingScope,
-            decoration: const InputDecoration(hintText: 'Nama lingkup...'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: _isAddingScope ? null : () => Navigator.pop(c), 
-              child: const Text('Batal')
-            ),
-            ElevatedButton(
-              onPressed: _isAddingScope
-                  ? null
-                  : () async {
-                      if (ctrl.text.trim().isEmpty) return;
-                      
-                      setState(() => _isAddingScope = true);
-                      setDialogState(() {});
-                      
-                      try {
-                        await provider.addScope(ctrl.text.trim());
-                        
-                        if (mounted) {
-                          setState(() => _lingkupTugas = ctrl.text.trim());
-                        }
-                        
-                        if (c.mounted) Navigator.pop(c);
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() => _isAddingScope = false);
-                        }
-                        if (c.mounted) {
-                          ScaffoldMessenger.of(c).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        }
-                      }
-                    },
-              child: _isAddingScope
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Tambah'),
-            ),
-          ],
-        ),
+      barrierDismissible: false,
+      builder: (_) => _AddNameDialog(
+        title: 'Tambah Lingkup Tugas',
+        hint: 'Nama lingkup...',
+        onSubmit: (text) => provider.addScope(text),
       ),
     );
-    
-    ctrl.dispose();
-    if (mounted && _isAddingScope) {
-      setState(() => _isAddingScope = false);
+    if (result != null && mounted) {
+      setState(() => _lingkupTugas = result);
     }
   }
 
   Widget _buildKategoriDropdown(TaskProvider provider) {
+    // ignore: deprecated_member_use_from_same_package
     final categories = provider.customCategories;
 
     // Bug #9 Fix: Ensure _category is always valid by forcing valid category
@@ -340,13 +289,16 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         Expanded(
           child: DropdownButtonFormField<String>(
             initialValue: validCategory,
+            isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Kategori',
               prefixIcon:
                   Icon(Icons.category_outlined, color: AppTheme.primary),
             ),
             items: categories
-                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                .map((c) => DropdownMenuItem(
+                    value: c,
+                    child: Text(c, overflow: TextOverflow.ellipsis)))
                 .toList(),
             onChanged: (v) => setState(() => _category = v!),
           ),
@@ -361,73 +313,19 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
-  // Bug #3 Fix: Simplified version dengan barrierDismissible: false
   Future<void> _showAddCategoryDialog(TaskProvider provider) async {
-    if (_isAddingCategory) return; // Prevent double-tap
-    
-    final ctrl = TextEditingController();
-    
-    await showDialog(
+    final result = await showDialog<String>(
       context: context,
-      barrierDismissible: false, // Prevent dismiss while loading
-      builder: (c) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Tambah Kategori'),
-          content: TextField(
-            controller: ctrl,
-            autofocus: true,
-            enabled: !_isAddingCategory,
-            decoration: const InputDecoration(hintText: 'Nama kategori...'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: _isAddingCategory ? null : () => Navigator.pop(c), 
-              child: const Text('Batal')
-            ),
-            ElevatedButton(
-              onPressed: _isAddingCategory
-                  ? null
-                  : () async {
-                      if (ctrl.text.trim().isEmpty) return;
-                      
-                      setState(() => _isAddingCategory = true);
-                      setDialogState(() {});
-                      
-                      try {
-                        await provider.addCategory(ctrl.text.trim());
-                        
-                        if (mounted) {
-                          setState(() => _category = ctrl.text.trim());
-                        }
-                        
-                        if (c.mounted) Navigator.pop(c);
-                      } catch (e) {
-                        if (mounted) {
-                          setState(() => _isAddingCategory = false);
-                        }
-                        if (c.mounted) {
-                          ScaffoldMessenger.of(c).showSnackBar(
-                            SnackBar(content: Text('Error: $e')),
-                          );
-                        }
-                      }
-                    },
-              child: _isAddingCategory
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Tambah'),
-            ),
-          ],
-        ),
+      barrierDismissible: false,
+      builder: (_) => _AddNameDialog(
+        title: 'Tambah Kategori',
+        hint: 'Nama kategori...',
+        // ignore: deprecated_member_use_from_same_package
+        onSubmit: (text) => provider.addCategory(text),
       ),
     );
-    
-    ctrl.dispose();
-    if (mounted && _isAddingCategory) {
-      setState(() => _isAddingCategory = false);
+    if (result != null && mounted) {
+      setState(() => _category = result);
     }
   }
 
@@ -1031,6 +929,103 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Dialog "Tambah Lingkup/Kategori" — sengaja jadi StatefulWidget sendiri
+/// (bukan StatefulBuilder di dalam method layar induk) supaya state loading
+/// murni lokal terhadap dialog. Layar pemanggil hanya menerima hasilnya lewat
+/// Navigator.pop(context, text) SETELAH dialog selesai — tidak pernah
+/// memanggil setState() layar induk sementara dialog masih terbuka.
+class _AddNameDialog extends StatefulWidget {
+  final String title;
+  final String hint;
+  final Future<void> Function(String text) onSubmit;
+
+  const _AddNameDialog({
+    required this.title,
+    required this.hint,
+    required this.onSubmit,
+  });
+
+  @override
+  State<_AddNameDialog> createState() => _AddNameDialogState();
+}
+
+class _AddNameDialogState extends State<_AddNameDialog> {
+  final _ctrl = TextEditingController();
+  bool _isSubmitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _isSubmitting) return;
+
+    setState(() {
+      _isSubmitting = true;
+      _error = null;
+    });
+
+    try {
+      await widget.onSubmit(text);
+      if (mounted) Navigator.pop(context, text);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+          _error = 'Gagal menambahkan: $e';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.title),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _ctrl,
+            autofocus: true,
+            enabled: !_isSubmitting,
+            decoration: InputDecoration(hintText: widget.hint),
+            onSubmitted: (_) => _submit(),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _error!,
+              style: const TextStyle(color: AppTheme.danger, fontSize: 12),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Tambah'),
+        ),
+      ],
     );
   }
 }

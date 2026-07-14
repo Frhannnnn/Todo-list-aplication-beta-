@@ -78,6 +78,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'calendar_add_task_fab',
         onPressed: () => Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),

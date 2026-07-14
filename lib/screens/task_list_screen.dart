@@ -58,6 +58,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
               ),
             ),
             floatingActionButton: FloatingActionButton(
+              heroTag: 'task_list_add_task_fab',
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
