@@ -112,17 +112,28 @@ class _ScheduleSettingsScreenState extends State<ScheduleSettingsScreen> {
     );
 
     final provider = context.read<TaskProvider>();
-    await provider.updateScheduleConfig(newConfig);
+    final saved = await provider.updateScheduleConfig(newConfig);
 
-    if (mounted) {
+    if (!mounted) return;
+
+    if (!saved) {
+      // Gagal simpan tidak boleh diam-diam (Issue #7).
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('✅ Jam kerja berhasil disimpan. Jadwal diperbarui.'),
-          backgroundColor: AppTheme.success,
+          content: Text('Gagal menyimpan — coba lagi'),
+          backgroundColor: AppTheme.danger,
         ),
       );
-      Navigator.of(context).pop();
+      return;
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('✅ Jam kerja berhasil disimpan. Jadwal diperbarui.'),
+        backgroundColor: AppTheme.success,
+      ),
+    );
+    Navigator.of(context).pop();
   }
 
   String _formatTime(int hour, int minute) {

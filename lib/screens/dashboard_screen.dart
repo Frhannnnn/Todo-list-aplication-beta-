@@ -39,6 +39,7 @@ class DashboardScreen extends StatelessWidget {
                         _buildSectionTitle('Lingkup Tugas Aktif'),
                         const SizedBox(height: 12),
                         _buildCourseCards(provider),
+                        _buildMataKuliahSection(provider),
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -463,6 +464,101 @@ class DashboardScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+
+  /// Ringkasan tugas per mata kuliah (Issue #2). Hanya tugas berlingkup
+  /// "Perkuliahan" yang mengisi mata kuliah yang dihitung di sini.
+  Widget _buildMataKuliahSection(TaskProvider provider) {
+    final matkulMap = <String, List<Task>>{};
+    for (final task in provider.tasks) {
+      final matkul = task.mataKuliah?.trim();
+      if (task.lingkupTugas == 'Perkuliahan' &&
+          matkul != null &&
+          matkul.isNotEmpty) {
+        matkulMap.putIfAbsent(matkul, () => []).add(task);
+      }
+    }
+
+    if (matkulMap.isEmpty) return const SizedBox.shrink();
+
+    final entries = matkulMap.entries.toList()
+      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle('Ringkasan Mata Kuliah'),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Column(
+              children: entries.map((entry) {
+                final tasks = entry.value;
+                final selesai = tasks
+                    .where((t) => t.status == TaskStatus.selesai)
+                    .length;
+                final totalMenit =
+                    tasks.fold<int>(0, (sum, t) => sum + t.totalFocusMinutes);
+                final subtitle = totalMenit > 0
+                    ? '${tasks.length} tugas • $selesai selesai • ${(totalMenit / 60).toStringAsFixed(1)} jam fokus'
+                    : '${tasks.length} tugas • $selesai selesai';
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.menu_book_rounded,
+                            color: AppTheme.primary, size: 18),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.key,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }

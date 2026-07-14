@@ -6,6 +6,8 @@ import '../services/task_provider.dart';
 import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
 import '../widgets/task_card_widget.dart';
+import '../widgets/rename_dialog.dart';
+import '../utils/task_status_actions.dart';
 import 'add_edit_task_screen.dart';
 
 class TaskListScreen extends StatefulWidget {
@@ -58,6 +60,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
               ),
             ),
             floatingActionButton: FloatingActionButton(
+              heroTag: 'task_list_add_task_fab',
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
@@ -326,7 +329,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
           ),
           onDelete: () => _confirmDelete(context, provider, task),
           onStatusChange: (status) =>
-              provider.updateStatus(task.id, status),
+              handleStatusChange(context, provider, task, status),
         );
       },
     );
@@ -346,13 +349,23 @@ class _TaskListScreenState extends State<TaskListScreen> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
-              provider.hapusTugas(task.id);
-              Navigator.pop(context);
+            onPressed: () async {
+              final deleted = await provider.hapusTugas(task.id);
+              if (context.mounted) Navigator.pop(context);
+              if (!ctx.mounted) return;
               ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('Tugas berhasil dihapus'),
+                SnackBar(
+                  content: Text(deleted
+                      ? 'Tugas berhasil dihapus'
+                      : 'Gagal menghapus — coba lagi'),
                   backgroundColor: AppTheme.danger,
+                  action: deleted
+                      ? SnackBarAction(
+                          label: 'Urungkan',
+                          textColor: Colors.white,
+                          onPressed: () => provider.restoreTugas(task),
+                        )
+                      : null,
                 ),
               );
             },
@@ -519,13 +532,22 @@ class _ScopeManagerSheetState extends State<_ScopeManagerSheet> {
                     title: Text(scope,
                         style: const TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w500)),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded,
-                          color: AppTheme.danger, size: 20),
-                      onPressed: () {
-                        widget.provider.removeScope(scope);
-                        setState(() {});
-                      },
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined,
+                              color: AppTheme.textSecondary, size: 20),
+                          tooltip: 'Ganti nama',
+                          onPressed: () => _renameScope(context, scope),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline_rounded,
+                              color: AppTheme.danger, size: 20),
+                          tooltip: 'Hapus',
+                          onPressed: () => _confirmRemoveScope(context, scope),
+                        ),
+                      ],
                     ),
                   )),
             const Divider(height: 24),
@@ -585,5 +607,127 @@ class _ScopeManagerSheetState extends State<_ScopeManagerSheet> {
     widget.provider.addScope(text);
     _ctrl.clear();
     setState(() {});
+  }
+
+  Future<void> _renameScope(BuildContext context, String oldName) async {
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => RenameDialog(
+        title: 'Ganti Nama Lingkup',
+        initialValue: oldName,
+        onSubmit: (newName) => widget.provider.renameScope(oldName, newName),
+      ),
+    );
+    if (result != null && mounted) setState(() {});
+  }
+
+  /// Hapus lingkup [scope]. Kalau masih ada tugas yang memakainya, user
+  /// wajib memindahkannya ke lingkup lain dulu (Issue #4) — tidak pernah
+  /// diam-diam meninggalkan tugas yatim.
+  Future<void> _confirmRemoveScope(BuildContext context, String scope) async {
+    final tasksInScope = widget.provider.getTasksByScope(scope);
+
+    if (tasksInScope.isEmpty) {
+      await widget.provider.removeScope(scope);
+      if (mounted) setState(() {});
+      return;
+    }
+
+    final otherScopes =
+        widget.provider.customScopes.where((s) => s != scope).toList();
+
+    if (otherScopes.isEmpty) {
+      if (!context.mounted) return;
+      await showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Tidak Bisa Dihapus'),
+          content: Text(
+              'Lingkup "$scope" masih dipakai ${tasksInScope.length} tugas, dan tidak ada lingkup lain untuk memindahkannya. Buat lingkup baru dulu, atau hapus tugas-tugasnya terlebih dahulu.'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Mengerti')),
+          ],
+        ),
+      );
+      return;
+    }
+
+    if (!context.mounted) return;
+    final target = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _ReassignScopeDialog(
+        scope: scope,
+        affectedCount: tasksInScope.length,
+        otherScopes: otherScopes,
+      ),
+    );
+
+    if (target != null) {
+      await widget.provider.removeScope(scope, reassignTasksTo: target);
+      if (mounted) setState(() {});
+    }
+  }
+}
+
+/// Dialog konfirmasi hapus lingkup yang masih dipakai tugas — user wajib
+/// memilih lingkup pengganti sebelum tugas-tugas dipindahkan & lingkup lama
+/// dihapus.
+class _ReassignScopeDialog extends StatefulWidget {
+  final String scope;
+  final int affectedCount;
+  final List<String> otherScopes;
+
+  const _ReassignScopeDialog({
+    required this.scope,
+    required this.affectedCount,
+    required this.otherScopes,
+  });
+
+  @override
+  State<_ReassignScopeDialog> createState() => _ReassignScopeDialogState();
+}
+
+class _ReassignScopeDialogState extends State<_ReassignScopeDialog> {
+  late String _target = widget.otherScopes.first;
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Hapus Lingkup Tugas'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+              'Lingkup "${widget.scope}" masih dipakai ${widget.affectedCount} tugas. Pindahkan tugas-tugas itu ke lingkup lain sebelum menghapus:'),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _target,
+            isExpanded: true,
+            items: widget.otherScopes
+                .map((s) => DropdownMenuItem(
+                    value: s, child: Text(s, overflow: TextOverflow.ellipsis)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _target = v);
+            },
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Batal'),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+          onPressed: () => Navigator.pop(context, _target),
+          child: const Text('Pindahkan & Hapus'),
+        ),
+      ],
+    );
   }
 }

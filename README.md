@@ -20,6 +20,8 @@ Aplikasi Flutter untuk membantu mahasiswa mengelola tugas secara terstruktur men
 - [Cara Menjalankan](#-cara-menjalankan)
 - [Testing](#-testing)
 - [Metode SAW](#-metode-saw)
+- [Smart Scheduler](#-smart-scheduler)
+- [Teknik Pomodoro](#-teknik-pomodoro)
 
 ---
 
@@ -28,9 +30,11 @@ Aplikasi Flutter untuk membantu mahasiswa mengelola tugas secara terstruktur men
 **TugasKu** adalah aplikasi manajemen tugas yang dirancang khusus untuk mahasiswa dengan fitur:
 - **Smart Prioritization**: Menggunakan metode SAW untuk ranking otomatis
 - **Intelligent Scheduling**: AI-powered task scheduling dengan conflict detection
+- **Pomodoro Timer**: Alat bantu fokus saat mengerjakan tugas
 - **Custom Notifications**: Notifikasi per-task yang dapat dikustomisasi
 - **Eisenhower Matrix**: Visualisasi prioritas dengan matriks Eisenhower
 - **Calendar Integration**: Integrasi kalender untuk deadline tracking
+- **Backup Data**: Ekspor & impor seluruh data lewat file JSON
 
 ---
 
@@ -47,10 +51,13 @@ Aplikasi Flutter untuk membantu mahasiswa mengelola tugas secara terstruktur men
 - **Create**: Tambah tugas dengan form lengkap
 - **Read**: List view dengan search dan filter
 - **Update**: Edit tugas dengan validation
-- **Delete**: Hapus tugas dengan cascade cleanup
+- **Delete**: Hapus tugas dengan cascade cleanup + **Undo** (urungkan lewat snackbar)
 - **Status Management**: Update status (Belum/Sedang/Selesai)
-- Custom scope & category management
+- **Kolom Mata Kuliah**: Muncul otomatis saat lingkup = *Perkuliahan*, untuk ringkasan per mata kuliah
+- Custom scope & category management (kategori **independen per lingkup**)
 - Notification scheduling per-task
+- Feedback jelas saat gagal menyimpan/menghapus (tidak diam-diam)
+- Setelah simpan/hapus, otomatis kembali ke tabel Data Tugas
 
 ### 3. 🧠 Prioritas (SAW Method)
 - Automatic ranking dengan algoritma SAW
@@ -82,12 +89,27 @@ Aplikasi Flutter untuk membantu mahasiswa mengelola tugas secara terstruktur men
 - Persistent notification preferences
 
 ### 7. ⚙️ Settings
-- Scope management (Perkuliahan, Tugas Rumah, dll)
-- Category management (Tugas, Ujian, Proyek, dll)
+- Scope management (Perkuliahan, Tugas Rumah, dll) — tambah, **ganti nama** (cascade ke tugas), hapus dengan pemindahan tugas
+- Category management per-lingkup — tambah, **ganti nama**, hapus (tiap lingkup punya kategori sendiri)
 - Notification settings (enable/disable, daily reminder)
 - Schedule settings (work hours, buffer time)
 - Statistics dashboard
-- Data management (clear all, backup info)
+- **Ekspor & Impor data** (backup manual ke file JSON)
+- Data management (clear all)
+
+### 8. ⏱️ Pomodoro Timer
+- Menekan **"Mulai"** pada tugas membuka timer fokus
+- Siklus Pomodoro: fokus 25 menit → istirahat pendek 5 menit → istirahat panjang 15 menit (tiap 4 sesi)
+- Kontrol mulai / jeda / lanjut / reset dengan hitung mundur melingkar
+- Akumulasi waktu fokus per tugas (muncul di Ringkasan Mata Kuliah)
+- Konfirmasi saat keluar bila timer masih berjalan
+- Status tugas **tidak** diubah otomatis — murni alat bantu fokus
+
+### 9. 💾 Ekspor & Impor Data
+- Ekspor seluruh data (tugas, lingkup, kategori, jadwal, notifikasi) ke file JSON
+- Impor untuk memulihkan data di perangkat/instalasi lain
+- Validasi format + konfirmasi sebelum menggantikan data
+- File rusak ditolak tanpa merusak data yang ada
 
 ---
 
@@ -103,6 +125,10 @@ Aplikasi Flutter untuk membantu mahasiswa mengelola tugas secara terstruktur men
 ### Storage
 - **SharedPreferences**: ^2.2.2 (Local key-value storage)
 - **JSON Encoding**: Built-in serialization
+
+### Data Backup (Ekspor/Impor)
+- **share_plus**: ^10.0.0 (Berbagi file cadangan lintas platform)
+- **file_picker**: ^8.1.2 (Memilih file cadangan untuk diimpor)
 
 ### Notifications
 - **flutter_local_notifications**: ^17.1.2 (Local push notifications)
@@ -139,22 +165,25 @@ lib/
 │   ├── notification_service.dart       # Notification management
 │   └── ai_task_creator_service.dart    # AI task creation helper
 ├── screens/                            # UI screens
-│   ├── dashboard_screen.dart           # Main dashboard
-│   ├── task_list_screen.dart           # Task list view
-│   ├── add_edit_task_screen.dart       # Task form
+│   ├── dashboard_screen.dart           # Main dashboard + Ringkasan Mata Kuliah
+│   ├── task_list_screen.dart           # Task list view + kelola lingkup
+│   ├── add_edit_task_screen.dart       # Task form + kelola kategori per-lingkup
+│   ├── pomodoro_timer_screen.dart      # Timer Pomodoro (Issue #5)
 │   ├── priority_screen.dart            # SAW ranking view
 │   ├── calendar_screen.dart            # Calendar view
 │   ├── schedule_screen.dart            # Schedule view
 │   ├── schedule_settings_screen.dart   # Schedule config
 │   ├── ai_task_creator_screen.dart     # AI task creator
 │   ├── notification_settings_screen.dart # Notification settings
-│   └── settings_screen.dart            # App settings
+│   └── settings_screen.dart            # App settings + ekspor/impor data
 ├── widgets/                            # Reusable widgets
 │   ├── task_card_widget.dart           # Task card component
+│   ├── rename_dialog.dart              # Dialog ganti nama (lingkup/kategori)
 │   └── conflict_notification_banner.dart # Conflict alert banner
 └── utils/                              # Utilities
     ├── app_theme.dart                  # Theme & colors
-    └── app_assets.dart                 # Asset paths
+    ├── app_assets.dart                 # Asset paths
+    └── task_status_actions.dart        # Helper aksi status (buka Pomodoro saat "Mulai")
 
 test/                                   # Test files
 ├── services/                           # Service tests
@@ -220,6 +249,7 @@ Storage (SharedPreferences)
     "id": "uuid-v4",
     "namaTugas": "String",
     "lingkupTugas": "String",
+    "mataKuliah": "String? (hanya untuk lingkup Perkuliahan)",
     "deadline": "ISO8601 DateTime",
     "tingkatKepentingan": "int (1-5)",
     "tingkatUrgensi": "int (1-5, auto-calculated)",
@@ -231,7 +261,8 @@ Storage (SharedPreferences)
     "notifEnabled": "bool",
     "notifSchedule": ["String array"],
     "sawScore": "double",
-    "ranking": "int"
+    "ranking": "int",
+    "totalFocusMinutes": "int (akumulasi menit fokus Pomodoro)"
   }
 ]
 ```
@@ -245,6 +276,7 @@ Storage (SharedPreferences)
 | `id` | String | UUID v4 unique identifier | ✅ |
 | `namaTugas` | String | Task name/title | ✅ |
 | `lingkupTugas` | String | Task scope (e.g., Perkuliahan) | ✅ |
+| `mataKuliah` | String? | Nama mata kuliah (hanya untuk lingkup Perkuliahan) | ❌ |
 | `deadline` | DateTime | Task deadline | ✅ |
 | `tingkatKepentingan` | int (1-5) | Importance level (manual) | ✅ |
 | `tingkatUrgensi` | int (1-5) | Urgency level (auto from deadline) | ✅ |
@@ -257,6 +289,7 @@ Storage (SharedPreferences)
 | `notifSchedule` | List<String> | Schedule: ['h-1', '3jam', 'deadline'] | ✅ |
 | `sawScore` | double | SAW calculation result | ✅ |
 | `ranking` | int | Task ranking (1 = highest priority) | ✅ |
+| `totalFocusMinutes` | int | Akumulasi menit fokus dari sesi Pomodoro | ✅ |
 
 #### Schedule Data
 
@@ -299,11 +332,22 @@ Storage (SharedPreferences)
 
 **Keys**:
 - `custom_scopes`: List<String> - User-defined scopes
-- `custom_categories`: List<String> - User-defined categories
+- `categories_by_scope`: JSON String (`Map<String, List<String>>`) - Kategori **per-lingkup**; tiap lingkup punya daftar kategorinya sendiri
+
+```json
+// categories_by_scope
+{
+  "Perkuliahan": ["Tugas", "Ujian", "Proyek", "Lainnya"],
+  "Tugas Rumah": ["Tugas", "Ujian", "Proyek", "Lainnya"],
+  "Pekerjaan":   ["Tugas", "Ujian", "Proyek", "Lainnya"]
+}
+```
+
+> **Migrasi:** data lama dengan key `custom_categories` (daftar kategori global tunggal) otomatis dimigrasi sekali-jalan — daftar lama disalin ke setiap lingkup yang ada saat pertama kali dimuat.
 
 **Default Values**:
 - Scopes: ['Perkuliahan', 'Tugas Rumah', 'Pekerjaan']
-- Categories: ['Tugas', 'Ujian', 'Proyek', 'Lainnya']
+- Categories (per lingkup): ['Tugas', 'Ujian', 'Proyek', 'Lainnya']
 
 ---
 
@@ -313,11 +357,14 @@ Storage (SharedPreferences)
 
 #### Task CRUD Operations
 
+> **Catatan:** `tambahTugas`, `editTugas`, dan `hapusTugas` kini mengembalikan `Future<bool>` (`true` = berhasil tersimpan) supaya UI dapat menampilkan pesan gagal ketika penyimpanan bermasalah (Issue #7).
+
 **`tambahTugas()`** - Add New Task
 ```dart
-Future<void> tambahTugas({
+Future<bool> tambahTugas({
   required String namaTugas,
   required String lingkupTugas,
+  String? mataKuliah,               // hanya untuk lingkup Perkuliahan
   required DateTime deadline,
   required int tingkatKepentingan,  // 1-5
   required int estimasiWaktu,       // hours
@@ -330,10 +377,12 @@ Future<void> tambahTugas({
 
 **`editTugas()`** - Update Existing Task
 ```dart
-Future<void> editTugas(
+Future<bool> editTugas(
   String id, {
   String? namaTugas,
   String? lingkupTugas,
+  String? mataKuliah,
+  bool clearMataKuliah = false,     // set true untuk mengosongkan mataKuliah
   DateTime? deadline,
   int? tingkatKepentingan,
   int? estimasiWaktu,
@@ -347,12 +396,27 @@ Future<void> editTugas(
 
 **`hapusTugas()`** - Delete Task
 ```dart
-Future<void> hapusTugas(String id);
+Future<bool> hapusTugas(String id);
+```
+
+**`restoreTugas()`** - Kembalikan tugas yang baru dihapus (fitur "Urungkan")
+```dart
+Future<bool> restoreTugas(Task task);  // re-insert dengan id asli
+```
+
+**`addFocusMinutes()`** - Tambah akumulasi menit fokus (dari sesi Pomodoro)
+```dart
+Future<void> addFocusMinutes(String taskId, int minutes);
 ```
 
 **`updateStatus()`** - Update Task Status
 ```dart
 Future<void> updateStatus(String id, TaskStatus status);
+```
+
+**`refreshUrgensi()`** - Hitung ulang urgensi & ranking SAW (dipanggil berkala)
+```dart
+void refreshUrgensi();
 ```
 
 **`clearAllTasks()`** - Clear All Tasks
@@ -399,13 +463,25 @@ double get persentaseSelesai
 ```dart
 // Scope operations
 Future<void> addScope(String scope)
-Future<void> removeScope(String scope)
+Future<bool> renameScope(String oldName, String newName)   // cascade ke semua tugas
 List<String> get customScopes
 
-// Category operations
-Future<void> addCategory(String category)
-Future<void> removeCategory(String category)
-List<String> get customCategories
+// Hapus lingkup. Jika masih dipakai tugas & reassignTasksTo == null,
+// penghapusan dibatalkan (success: false) agar UI meminta konfirmasi dulu.
+Future<({bool success, int affectedTasks})> removeScope(
+  String scope, {
+  String? reassignTasksTo,  // pindahkan tugas ke lingkup ini sebelum hapus
+})
+
+// Category operations (per-lingkup — Issue #4)
+List<String> categoriesForScope(String scope)
+Future<void> addCategoryToScope(String scope, String category)
+Future<void> removeCategoryFromScope(String scope, String category)
+Future<bool> renameCategoryInScope(                        // cascade ke tugas di lingkup itu
+  String scope,
+  String oldCat,
+  String newCat,
+)
 ```
 
 #### Notification Management
@@ -456,6 +532,36 @@ List<ScheduleConflict> get latestConflicts
 DateTime? get conflictsDetectedAt
 bool get hasConflicts
 void dismissConflicts()
+```
+
+#### Ekspor & Impor Data (Issue #6)
+
+```dart
+// Bundel seluruh data jadi Map siap di-jsonEncode
+Map<String, dynamic> exportData()
+
+// Terapkan data hasil ekspor, MENGGANTIKAN data saat ini.
+// Parsing dilakukan ke variabel lokal dulu — kalau ada yang tidak valid,
+// seluruh proses dibatalkan dan data yang berjalan tidak tersentuh.
+Future<({bool success, String? error})> importData(Map<String, dynamic> json)
+```
+
+Struktur file ekspor:
+```json
+{
+  "formatVersion": 1,
+  "exportedAt": "ISO8601 DateTime",
+  "tasks": [ /* array Task */ ],
+  "customScopes": [ "String" ],
+  "categoriesByScope": { "Scope": ["Kategori"] },
+  "scheduleConfig": { /* ScheduleConfig */ },
+  "notifSettings": {
+    "notifEnabled": true,
+    "dailyReminderEnabled": true,
+    "dailyReminderHour": 8,
+    "dailyReminderMinute": 0
+  }
+}
 ```
 
 ### SAWService API
@@ -790,6 +896,30 @@ Tingkat urgensi dihitung otomatis dari sisa waktu ke deadline:
 
 ---
 
+## ⏱️ Teknik Pomodoro
+
+Saat pengguna menekan **"Mulai"** pada sebuah tugas, status berubah menjadi *Sedang Dikerjakan* dan terbuka layar **Timer Pomodoro** untuk membantu fokus.
+
+### Siklus Default
+
+| Fase | Durasi | Keterangan |
+|------|--------|-----------|
+| 🧠 Fokus | 25 menit | Sesi kerja terfokus |
+| ☕ Istirahat Pendek | 5 menit | Setelah tiap sesi fokus |
+| 🌿 Istirahat Panjang | 15 menit | Setelah 4 sesi fokus selesai |
+
+### Perilaku
+
+- Kontrol **mulai / jeda / lanjut / reset** dengan hitung mundur melingkar
+- Otomatis lanjut ke fase berikutnya saat satu fase selesai
+- Tiap sesi fokus yang selesai penuh menambah `totalFocusMinutes` tugas (muncul di **Ringkasan Mata Kuliah** dashboard)
+- Konfirmasi bila pengguna keluar saat timer masih berjalan
+- Status tugas **tidak** pernah diubah otomatis oleh timer — "Selesai" tetap dikendalikan manual
+
+Durasi diatur sebagai konstanta di `pomodoro_timer_screen.dart` (`_focusMinutes`, `_shortBreakMinutes`, `_longBreakMinutes`, `_sessionsBeforeLongBreak`) sehingga mudah disesuaikan.
+
+---
+
 ## 🎨 UI Design
 
 ### Color Scheme
@@ -825,6 +955,7 @@ Tingkat urgensi dihitung otomatis dari sisa waktu ke deadline:
 - **No Cloud Sync**: No data sent to external servers
 - **No Analytics**: No tracking or analytics
 - **Offline First**: Fully functional without internet
+- **Manual Backup**: Ekspor/impor data lewat file JSON dikendalikan penuh oleh pengguna (tidak otomatis ke mana pun)
 
 ---
 

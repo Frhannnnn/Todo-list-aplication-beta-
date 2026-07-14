@@ -70,7 +70,6 @@ void main() {
 
       test('Skenario Remove Scope: Remove existing scope', () async {
         // Arrange
-        const scope = 'Tugas Rumah';
         const newScope = 'Olahraga';
         await taskProvider.addScope(newScope);
         final countAfterAdd = taskProvider.customScopes.length;
@@ -123,104 +122,227 @@ void main() {
     });
 
     // ─────────────────────────────────────────────
-    // 3.2 Test addCategory() & removeCategory()
+    // 3.2 Test addCategoryToScope() & removeCategoryFromScope()
+    // Kategori kini per-lingkup (Issue #4) — tidak lagi global.
     // ─────────────────────────────────────────────
 
-    group('Category Management', () {
-      test('Skenario Add Valid Category: Tambah category baru', () async {
-        // Arrange
-        const newCategory = 'Seminar';
-        final initialCount = taskProvider.customCategories.length;
+    group('Category Management (per-scope)', () {
+      const scope = 'Perkuliahan';
 
-        // Act
-        await taskProvider.addCategory(newCategory);
+      test('Skenario Add Valid Category: Tambah category baru ke lingkup', () async {
+        final initialCount = taskProvider.categoriesForScope(scope).length;
 
-        // Assert
-        expect(taskProvider.customCategories.length, initialCount + 1);
-        expect(taskProvider.customCategories.contains(newCategory), true);
+        await taskProvider.addCategoryToScope(scope, 'Seminar');
+
+        expect(taskProvider.categoriesForScope(scope).length, initialCount + 1);
+        expect(taskProvider.categoriesForScope(scope).contains('Seminar'), true);
       });
 
       test('Skenario Add Valid Category: Trim whitespace', () async {
-        // Act
-        await taskProvider.addCategory('  Seminar  ');
+        await taskProvider.addCategoryToScope(scope, '  Seminar  ');
 
-        // Assert
-        expect(taskProvider.customCategories.contains('Seminar'), true);
+        expect(taskProvider.categoriesForScope(scope).contains('Seminar'), true);
       });
 
-      test('Skenario Add Invalid Category: Reject duplicate', () async {
-        // Arrange
+      test('Skenario Add Invalid Category: Reject duplicate dalam lingkup sama', () async {
         const category = 'Tugas';
-        final initialCount = taskProvider.customCategories.length;
+        final initialCount = taskProvider.categoriesForScope(scope).length;
 
-        // Act
-        await taskProvider.addCategory(category); // Should be ignored (duplicate)
+        await taskProvider.addCategoryToScope(scope, category);
 
-        // Assert
-        expect(taskProvider.customCategories.length, initialCount);
+        expect(taskProvider.categoriesForScope(scope).length, initialCount);
       });
 
       test('Skenario Add Invalid Category: Reject empty string', () async {
-        // Arrange
-        final initialCount = taskProvider.customCategories.length;
+        final initialCount = taskProvider.categoriesForScope(scope).length;
 
-        // Act
-        await taskProvider.addCategory('');
+        await taskProvider.addCategoryToScope(scope, '');
 
-        // Assert
-        expect(taskProvider.customCategories.length, initialCount);
+        expect(taskProvider.categoriesForScope(scope).length, initialCount);
       });
 
       test('Skenario Remove Category: Remove existing category', () async {
-        // Arrange
         const newCategory = 'Workshop';
-        await taskProvider.addCategory(newCategory);
-        final countAfterAdd = taskProvider.customCategories.length;
+        await taskProvider.addCategoryToScope(scope, newCategory);
+        final countAfterAdd = taskProvider.categoriesForScope(scope).length;
 
-        // Act
-        await taskProvider.removeCategory(newCategory);
+        await taskProvider.removeCategoryFromScope(scope, newCategory);
 
-        // Assert
-        expect(taskProvider.customCategories.length, countAfterAdd - 1);
-        expect(taskProvider.customCategories.contains(newCategory), false);
+        expect(taskProvider.categoriesForScope(scope).length, countAfterAdd - 1);
+        expect(taskProvider.categoriesForScope(scope).contains(newCategory), false);
       });
 
       test('Skenario Remove Category: Safe remove non-exist category', () async {
-        // Arrange
-        final initialCount = taskProvider.customCategories.length;
+        final initialCount = taskProvider.categoriesForScope(scope).length;
 
-        // Act
-        await taskProvider.removeCategory('Non-Exist Category');
+        await taskProvider.removeCategoryFromScope(scope, 'Non-Exist Category');
 
-        // Assert
-        expect(taskProvider.customCategories.length, initialCount);
+        expect(taskProvider.categoriesForScope(scope).length, initialCount);
       });
 
       test('Skenario Multiple Categories: Add multiple categories', () async {
-        // Act
-        await taskProvider.addCategory('Category 1');
-        await taskProvider.addCategory('Category 2');
-        await taskProvider.addCategory('Category 3');
+        await taskProvider.addCategoryToScope(scope, 'Category 1');
+        await taskProvider.addCategoryToScope(scope, 'Category 2');
+        await taskProvider.addCategoryToScope(scope, 'Category 3');
 
-        // Assert
-        expect(taskProvider.customCategories.contains('Category 1'), true);
-        expect(taskProvider.customCategories.contains('Category 2'), true);
-        expect(taskProvider.customCategories.contains('Category 3'), true);
+        final cats = taskProvider.categoriesForScope(scope);
+        expect(cats.contains('Category 1'), true);
+        expect(cats.contains('Category 2'), true);
+        expect(cats.contains('Category 3'), true);
       });
 
       test('Skenario Multiple Categories: Remove some categories', () async {
-        // Arrange
-        await taskProvider.addCategory('Category 1');
-        await taskProvider.addCategory('Category 2');
-        await taskProvider.addCategory('Category 3');
+        await taskProvider.addCategoryToScope(scope, 'Category 1');
+        await taskProvider.addCategoryToScope(scope, 'Category 2');
+        await taskProvider.addCategoryToScope(scope, 'Category 3');
 
-        // Act
-        await taskProvider.removeCategory('Category 2');
+        await taskProvider.removeCategoryFromScope(scope, 'Category 2');
 
-        // Assert
-        expect(taskProvider.customCategories.contains('Category 1'), true);
-        expect(taskProvider.customCategories.contains('Category 2'), false);
-        expect(taskProvider.customCategories.contains('Category 3'), true);
+        final cats = taskProvider.categoriesForScope(scope);
+        expect(cats.contains('Category 1'), true);
+        expect(cats.contains('Category 2'), false);
+        expect(cats.contains('Category 3'), true);
+      });
+
+      test('Skenario Independensi: kategori di satu lingkup tidak memengaruhi lingkup lain', () async {
+        await taskProvider.addCategoryToScope('Perkuliahan', 'Ujian Tengah Semester');
+
+        expect(
+          taskProvider.categoriesForScope('Perkuliahan').contains('Ujian Tengah Semester'),
+          true,
+        );
+        expect(
+          taskProvider.categoriesForScope('Tugas Rumah').contains('Ujian Tengah Semester'),
+          false,
+        );
+      });
+
+      test('Skenario Independensi: dua lingkup boleh punya kategori dengan nama sama', () async {
+        await taskProvider.addCategoryToScope('Perkuliahan', 'Mendesak');
+        await taskProvider.addCategoryToScope('Tugas Rumah', 'Mendesak');
+
+        expect(taskProvider.categoriesForScope('Perkuliahan').contains('Mendesak'), true);
+        expect(taskProvider.categoriesForScope('Tugas Rumah').contains('Mendesak'), true);
+
+        // Hapus dari satu lingkup tidak menghapus dari lingkup lain
+        await taskProvider.removeCategoryFromScope('Perkuliahan', 'Mendesak');
+        expect(taskProvider.categoriesForScope('Perkuliahan').contains('Mendesak'), false);
+        expect(taskProvider.categoriesForScope('Tugas Rumah').contains('Mendesak'), true);
+      });
+    });
+
+    // ─────────────────────────────────────────────
+    // 3.3 Test renameScope() & renameCategoryInScope() (Issue #9)
+    // ─────────────────────────────────────────────
+
+    group('Rename (cascade)', () {
+      test('Skenario Rename Scope: tugas lama ikut menunjuk nama baru', () async {
+        await taskProvider.tambahTugas(
+          namaTugas: 'Tugas A',
+          lingkupTugas: 'Perkuliahan',
+          deadline: DateTime.now().add(const Duration(days: 1)),
+          tingkatKepentingan: 3,
+          estimasiWaktu: 2,
+        );
+
+        final success = await taskProvider.renameScope('Perkuliahan', 'Kuliah S1');
+
+        expect(success, true);
+        expect(taskProvider.customScopes.contains('Kuliah S1'), true);
+        expect(taskProvider.customScopes.contains('Perkuliahan'), false);
+        expect(taskProvider.tasks.first.lingkupTugas, 'Kuliah S1');
+      });
+
+      test('Skenario Rename Scope: kategori lingkup ikut pindah', () async {
+        await taskProvider.addCategoryToScope('Perkuliahan', 'Praktikum');
+
+        await taskProvider.renameScope('Perkuliahan', 'Kuliah S1');
+
+        expect(taskProvider.categoriesForScope('Kuliah S1').contains('Praktikum'), true);
+      });
+
+      test('Skenario Rename Scope: ditolak jika nama baru sudah dipakai', () async {
+        final success = await taskProvider.renameScope('Perkuliahan', 'Tugas Rumah');
+
+        expect(success, false);
+        expect(taskProvider.customScopes.contains('Perkuliahan'), true);
+      });
+
+      test('Skenario Rename Category: tugas lama ikut menunjuk kategori baru', () async {
+        await taskProvider.tambahTugas(
+          namaTugas: 'Tugas A',
+          lingkupTugas: 'Perkuliahan',
+          deadline: DateTime.now().add(const Duration(days: 1)),
+          tingkatKepentingan: 3,
+          estimasiWaktu: 2,
+          category: 'Tugas',
+        );
+
+        final success = await taskProvider.renameCategoryInScope(
+            'Perkuliahan', 'Tugas', 'Tugas Individu');
+
+        expect(success, true);
+        expect(taskProvider.tasks.first.category, 'Tugas Individu');
+      });
+
+      test('Skenario Rename Category: ditolak jika nama baru sudah dipakai di lingkup sama', () async {
+        final success = await taskProvider.renameCategoryInScope(
+            'Perkuliahan', 'Tugas', 'Ujian');
+
+        expect(success, false);
+      });
+    });
+
+    // ─────────────────────────────────────────────
+    // 3.4 Test removeScope() dengan tugas terdampak (Issue #4)
+    // ─────────────────────────────────────────────
+
+    group('Remove Scope with affected tasks', () {
+      test('Skenario Remove Scope Kosong: langsung berhasil tanpa reassign', () async {
+        await taskProvider.addScope('Scope Kosong');
+
+        final result = await taskProvider.removeScope('Scope Kosong');
+
+        expect(result.success, true);
+        expect(result.affectedTasks, 0);
+        expect(taskProvider.customScopes.contains('Scope Kosong'), false);
+      });
+
+      test('Skenario Remove Scope Terpakai: ditolak tanpa reassignTasksTo', () async {
+        await taskProvider.tambahTugas(
+          namaTugas: 'Tugas A',
+          lingkupTugas: 'Perkuliahan',
+          deadline: DateTime.now().add(const Duration(days: 1)),
+          tingkatKepentingan: 3,
+          estimasiWaktu: 2,
+        );
+
+        final result = await taskProvider.removeScope('Perkuliahan');
+
+        expect(result.success, false);
+        expect(result.affectedTasks, 1);
+        expect(taskProvider.customScopes.contains('Perkuliahan'), true);
+        expect(taskProvider.tasks.first.lingkupTugas, 'Perkuliahan');
+      });
+
+      test('Skenario Remove Scope Terpakai: berhasil dengan reassignTasksTo', () async {
+        await taskProvider.tambahTugas(
+          namaTugas: 'Tugas A',
+          lingkupTugas: 'Perkuliahan',
+          deadline: DateTime.now().add(const Duration(days: 1)),
+          tingkatKepentingan: 3,
+          estimasiWaktu: 2,
+        );
+
+        final result = await taskProvider.removeScope(
+          'Perkuliahan',
+          reassignTasksTo: 'Tugas Rumah',
+        );
+
+        expect(result.success, true);
+        expect(result.affectedTasks, 1);
+        expect(taskProvider.customScopes.contains('Perkuliahan'), false);
+        expect(taskProvider.tasks.first.lingkupTugas, 'Tugas Rumah');
       });
     });
 
@@ -246,7 +368,7 @@ void main() {
 
       test('Skenario Category Persistent: Category data saved dan loaded', () async {
         // Arrange
-        await taskProvider.addCategory('Persistent Category');
+        await taskProvider.addCategoryToScope('Perkuliahan', 'Persistent Category');
 
         // Act - Create new provider instance and load data
         final newProvider = TaskProvider(notifService: MockNotificationService());
@@ -254,11 +376,10 @@ void main() {
 
         // Assert
         expect(
-          newProvider.customCategories.contains('Persistent Category'),
+          newProvider.categoriesForScope('Perkuliahan').contains('Persistent Category'),
           true,
         );
       });
     });
   });
 }
-

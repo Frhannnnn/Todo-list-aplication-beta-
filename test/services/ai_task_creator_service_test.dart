@@ -51,7 +51,7 @@ void main() {
       test('accepts input at maximum length (10000 chars)', () async {
         // Create valid input close to 10000 chars
         const line = 'Tugas pemrograman dasar\n';
-        final repeatCount = 9900 ~/ line.length;
+        const repeatCount = 9900 ~/ line.length;
         final input = line * repeatCount;
         // Ensure it's within bounds
         expect(input.length, greaterThanOrEqualTo(50));

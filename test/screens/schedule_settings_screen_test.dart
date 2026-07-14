@@ -275,9 +275,6 @@ void main() {
         // Wait for initialization and scheduling
         await Future.delayed(const Duration(milliseconds: 500));
 
-        // Should have time blocks scheduled for the task
-        final blocksBeforeUpdate = provider.getTimeBlocksForTask('test-task-1');
-
         // Update config to different work hours
         final newConfig = ScheduleConfig(
           workStartHour: 10,

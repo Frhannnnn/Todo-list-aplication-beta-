@@ -29,7 +29,7 @@ List<Task> applyFilterAndSort({
         .where(
           (t) =>
               t.namaTugas.toLowerCase().contains(q) ||
-              t.mataKuliah.toLowerCase().contains(q),
+              t.lingkupTugas.toLowerCase().contains(q),
         )
         .toList();
   }
@@ -228,7 +228,7 @@ void main() {
                   .where(
                     (t) =>
                         t.namaTugas.toLowerCase().contains(q) ||
-                        t.mataKuliah.toLowerCase().contains(q),
+                        t.lingkupTugas.toLowerCase().contains(q),
                   )
                   .length;
 

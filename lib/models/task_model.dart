@@ -16,6 +16,7 @@ class Task {
   final String id;
   String namaTugas;
   String lingkupTugas; // gantikan mataKuliah & TaskGroup
+  String? mataKuliah;  // hanya relevan saat lingkupTugas == 'Perkuliahan'
   DateTime deadline;
   int tingkatKepentingan; // 1-5 (input manual)
   int tingkatUrgensi;     // 1-5 (dihitung otomatis dari deadline, bukan input)
@@ -24,6 +25,7 @@ class Task {
   String category;        // String bebas (custom)
   String? catatan;
   DateTime createdAt;
+  int totalFocusMinutes;  // akumulasi menit fokus dari sesi Pomodoro
 
   // Notifikasi per-tugas
   bool notifEnabled;
@@ -37,6 +39,7 @@ class Task {
     required this.id,
     required this.namaTugas,
     required this.lingkupTugas,
+    this.mataKuliah,
     required this.deadline,
     required this.tingkatKepentingan,
     int? tingkatUrgensi,
@@ -49,6 +52,7 @@ class Task {
     List<String>? notifSchedule,
     this.sawScore = 0.0,
     this.ranking = 0,
+    this.totalFocusMinutes = 0,
   })  : tingkatUrgensi = tingkatUrgensi ?? _hitungUrgensiDariDeadline(deadline),
         notifSchedule = notifSchedule ?? ['h-1', '3jam', 'deadline'];
 
@@ -88,9 +92,6 @@ class Task {
     }
   }
 
-  /// Alias untuk lingkupTugas (backward compat)
-  String get mataKuliah => lingkupTugas;
-
   /// Label kategori untuk ditampilkan di UI
   String get categoryLabel => category;
 
@@ -110,6 +111,7 @@ class Task {
       'id': id,
       'namaTugas': namaTugas,
       'lingkupTugas': lingkupTugas,
+      'mataKuliah': mataKuliah,
       'deadline': deadline.toIso8601String(),
       'tingkatKepentingan': tingkatKepentingan,
       'tingkatUrgensi': tingkatUrgensi,
@@ -122,6 +124,7 @@ class Task {
       'notifSchedule': notifSchedule,
       'sawScore': sawScore,
       'ranking': ranking,
+      'totalFocusMinutes': totalFocusMinutes,
     };
   }
 
@@ -156,6 +159,7 @@ class Task {
       id: json['id'],
       namaTugas: json['namaTugas'],
       lingkupTugas: lingkup,
+      mataKuliah: json['mataKuliah'] as String?,
       deadline: deadline,
       tingkatKepentingan: json['tingkatKepentingan'],
       tingkatUrgensi: Task._hitungUrgensiDariDeadline(deadline),
@@ -168,12 +172,15 @@ class Task {
       notifSchedule: notifSchedule,
       sawScore: (json['sawScore'] as num).toDouble(),
       ranking: json['ranking'],
+      totalFocusMinutes: json['totalFocusMinutes'] as int? ?? 0,
     );
   }
 
   Task copyWith({
     String? namaTugas,
     String? lingkupTugas,
+    String? mataKuliah,
+    bool clearMataKuliah = false,
     DateTime? deadline,
     int? tingkatKepentingan,
     int? tingkatUrgensi,
@@ -185,12 +192,14 @@ class Task {
     List<String>? notifSchedule,
     double? sawScore,
     int? ranking,
+    int? totalFocusMinutes,
   }) {
     final newDeadline = deadline ?? this.deadline;
     return Task(
       id: id,
       namaTugas: namaTugas ?? this.namaTugas,
       lingkupTugas: lingkupTugas ?? this.lingkupTugas,
+      mataKuliah: clearMataKuliah ? null : (mataKuliah ?? this.mataKuliah),
       deadline: newDeadline,
       tingkatKepentingan: tingkatKepentingan ?? this.tingkatKepentingan,
       // Recalculate urgensi whenever deadline changes
@@ -206,6 +215,7 @@ class Task {
       notifSchedule: notifSchedule ?? List.from(this.notifSchedule),
       sawScore: sawScore ?? this.sawScore,
       ranking: ranking ?? this.ranking,
+      totalFocusMinutes: totalFocusMinutes ?? this.totalFocusMinutes,
     );
   }
 }

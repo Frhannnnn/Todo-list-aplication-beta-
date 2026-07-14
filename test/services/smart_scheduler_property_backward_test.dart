@@ -19,15 +19,6 @@ import 'package:tugasku/services/smart_scheduler_service.dart';
 // Generators
 // ---------------------------------------------------------------------------
 
-/// Generates a random hour-aligned DateTime in the future relative to [now].
-/// Returns a DateTime between 1 and [maxHoursAhead] hours ahead of [now].
-DateTime _generateFutureHourAligned(Random rng, DateTime now,
-    {int maxHoursAhead = 72}) {
-  final hoursAhead = 1 + rng.nextInt(maxHoursAhead);
-  final future = now.add(Duration(hours: hoursAhead));
-  return DateTime(future.year, future.month, future.day, future.hour);
-}
-
 /// Generates a random Task with valid parameters for scheduling.
 /// - estimasiWaktu: 1-10
 /// - deadline: future (relative to [now])

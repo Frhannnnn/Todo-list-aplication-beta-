@@ -34,8 +34,10 @@ class TaskProvider with ChangeNotifier {
   int _dailyReminderMinute = 0;
 
   // Custom scopes & categories (disimpan di SharedPreferences)
+  // Kategori kini per-lingkup: tiap lingkup punya daftar kategorinya sendiri,
+  // tidak dibagi-pakai dengan lingkup lain (boleh kebetulan sama nama).
   List<String> _customScopes = ['Perkuliahan', 'Tugas Rumah', 'Pekerjaan'];
-  List<String> _customCategories = ['Tugas', 'Ujian', 'Proyek', 'Lainnya'];
+  Map<String, List<String>> _categoriesByScope = {};
 
   bool get notifEnabled => _notifEnabled;
   bool get dailyReminderEnabled => _dailyReminderEnabled;
@@ -43,7 +45,10 @@ class TaskProvider with ChangeNotifier {
   int get dailyReminderMinute => _dailyReminderMinute;
 
   List<String> get customScopes => List.unmodifiable(_customScopes);
-  List<String> get customCategories => List.unmodifiable(_customCategories);
+
+  /// Daftar kategori milik satu lingkup tertentu.
+  List<String> categoriesForScope(String scope) =>
+      List.unmodifiable(_categoriesByScope[scope] ?? const []);
 
   List<Task> get tasks => _tasks;
 
@@ -132,6 +137,8 @@ class TaskProvider with ChangeNotifier {
   // CUSTOM SCOPES & CATEGORIES
   // ─────────────────────────────────────────────
 
+  static const String _categoriesByScopeKey = 'categories_by_scope';
+
   Future<void> _loadCustomData() async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -140,44 +147,157 @@ class TaskProvider with ChangeNotifier {
       _customScopes = rawScopes;
     }
 
-    final rawCats = prefs.getStringList('custom_categories');
-    if (rawCats != null && rawCats.isNotEmpty) {
-      _customCategories = rawCats;
+    final rawCategoriesByScope = prefs.getString(_categoriesByScopeKey);
+    if (rawCategoriesByScope != null) {
+      try {
+        final decoded = jsonDecode(rawCategoriesByScope) as Map<String, dynamic>;
+        _categoriesByScope = decoded.map(
+          (scope, cats) => MapEntry(scope, List<String>.from(cats as List)),
+        );
+      } catch (e) {
+        debugPrint('Corrupt categories_by_scope data, fallback ke migrasi: $e');
+      }
+    }
+
+    if (_categoriesByScope.isEmpty) {
+      // Migrasi sekali-jalan dari skema lama (kategori global 'custom_categories')
+      // ke skema baru (per-lingkup): salin daftar lama ke SETIAP lingkup yang ada.
+      final legacyFlat =
+          prefs.getStringList('custom_categories') ?? List.from(kDefaultCategories);
+      for (final scope in _customScopes) {
+        _categoriesByScope[scope] = List.from(legacyFlat);
+      }
+      await _saveCustomData();
+    } else {
+      // Pastikan tiap lingkup yang ada (termasuk yang baru ditambah setelah
+      // migrasi) selalu punya entry kategori sendiri, tidak pernah kosong.
+      var changed = false;
+      for (final scope in _customScopes) {
+        if (!_categoriesByScope.containsKey(scope)) {
+          _categoriesByScope[scope] = List.from(kDefaultCategories);
+          changed = true;
+        }
+      }
+      if (changed) await _saveCustomData();
     }
   }
 
   Future<void> _saveCustomData() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('custom_scopes', _customScopes);
-    await prefs.setStringList('custom_categories', _customCategories);
+    await prefs.setString(_categoriesByScopeKey, jsonEncode(_categoriesByScope));
   }
 
   Future<void> addScope(String scope) async {
     final trimmed = scope.trim();
     if (trimmed.isEmpty || _customScopes.contains(trimmed)) return;
     _customScopes.add(trimmed);
+    _categoriesByScope.putIfAbsent(trimmed, () => List.from(kDefaultCategories));
     await _saveCustomData();
     notifyListeners();
   }
 
-  Future<void> removeScope(String scope) async {
+  /// Hapus lingkup [scope]. Jika masih ada tugas yang memakai lingkup ini dan
+  /// [reassignTasksTo] tidak diisi, penghapusan DIBATALKAN (return
+  /// success:false) supaya UI bisa meminta konfirmasi/pemindahan tugas dulu —
+  /// tidak pernah diam-diam meninggalkan tugas "yatim".
+  Future<({bool success, int affectedTasks})> removeScope(
+    String scope, {
+    String? reassignTasksTo,
+  }) async {
+    final affected = _tasks.where((t) => t.lingkupTugas == scope).toList();
+
+    if (affected.isNotEmpty) {
+      if (reassignTasksTo == null || reassignTasksTo == scope) {
+        return (success: false, affectedTasks: affected.length);
+      }
+      for (final task in affected) {
+        final index = _tasks.indexWhere((t) => t.id == task.id);
+        if (index != -1) {
+          _tasks[index] = _tasks[index].copyWith(lingkupTugas: reassignTasksTo);
+        }
+      }
+      _recalculateSAW();
+      await _saveTasks();
+    }
+
     _customScopes.remove(scope);
+    _categoriesByScope.remove(scope);
     await _saveCustomData();
     notifyListeners();
+    return (success: true, affectedTasks: affected.length);
   }
 
-  Future<void> addCategory(String category) async {
+  /// Ganti nama lingkup [oldName] jadi [newName], termasuk memindahkan semua
+  /// tugas yang memakainya (cascade) dan daftar kategorinya. Ditolak jika
+  /// [newName] sudah dipakai lingkup lain.
+  Future<bool> renameScope(String oldName, String newName) async {
+    final trimmed = newName.trim();
+    if (trimmed.isEmpty || trimmed == oldName) return false;
+    if (_customScopes.contains(trimmed)) return false;
+    if (!_customScopes.contains(oldName)) return false;
+
+    final idx = _customScopes.indexOf(oldName);
+    _customScopes[idx] = trimmed;
+    _categoriesByScope[trimmed] = _categoriesByScope.remove(oldName) ??
+        List.from(kDefaultCategories);
+
+    for (var i = 0; i < _tasks.length; i++) {
+      if (_tasks[i].lingkupTugas == oldName) {
+        _tasks[i] = _tasks[i].copyWith(lingkupTugas: trimmed);
+      }
+    }
+
+    _recalculateSAW();
+    await _saveTasks();
+    await _saveCustomData();
+    notifyListeners();
+    return true;
+  }
+
+  Future<void> addCategoryToScope(String scope, String category) async {
     final trimmed = category.trim();
-    if (trimmed.isEmpty || _customCategories.contains(trimmed)) return;
-    _customCategories.add(trimmed);
+    if (trimmed.isEmpty) return;
+    final list = _categoriesByScope.putIfAbsent(scope, () => []);
+    if (list.contains(trimmed)) return;
+    list.add(trimmed);
     await _saveCustomData();
     notifyListeners();
   }
 
-  Future<void> removeCategory(String category) async {
-    _customCategories.remove(category);
+  Future<void> removeCategoryFromScope(String scope, String category) async {
+    _categoriesByScope[scope]?.remove(category);
     await _saveCustomData();
     notifyListeners();
+  }
+
+  /// Ganti nama kategori [oldCat] → [newCat] di dalam lingkup [scope],
+  /// termasuk memindahkan semua tugas di lingkup itu yang memakai kategori
+  /// lama (cascade). Ditolak jika [newCat] sudah dipakai di lingkup yang sama.
+  Future<bool> renameCategoryInScope(
+    String scope,
+    String oldCat,
+    String newCat,
+  ) async {
+    final trimmed = newCat.trim();
+    final list = _categoriesByScope[scope];
+    if (list == null || trimmed.isEmpty || trimmed == oldCat) return false;
+    if (list.contains(trimmed)) return false;
+    if (!list.contains(oldCat)) return false;
+
+    final idx = list.indexOf(oldCat);
+    list[idx] = trimmed;
+
+    for (var i = 0; i < _tasks.length; i++) {
+      if (_tasks[i].lingkupTugas == scope && _tasks[i].category == oldCat) {
+        _tasks[i] = _tasks[i].copyWith(category: trimmed);
+      }
+    }
+
+    await _saveTasks();
+    await _saveCustomData();
+    notifyListeners();
+    return true;
   }
 
   // ─────────────────────────────────────────────
@@ -295,22 +415,34 @@ class TaskProvider with ChangeNotifier {
   }
 
   // Bug #5 Fix: Add backup before saving new data
-  Future<void> _saveTasks() async {
+  /// Return `true` bila berhasil tersimpan, `false` bila gagal — supaya
+  /// pemanggil (tambahTugas/editTugas/hapusTugas) bisa memberi tahu user,
+  /// bukan diam-diam menganggap sukses saat penyimpanan sebenarnya gagal.
+  Future<bool> _saveTasks() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     try {
       // Backup old data first
       final oldData = prefs.getString(_storageKey);
       if (oldData != null) {
         await prefs.setString('${_storageKey}_backup', oldData);
       }
-      
+
       // Save new data
       final String encoded = jsonEncode(_tasks.map((t) => t.toJson()).toList());
       await prefs.setString(_storageKey, encoded);
+      return true;
     } catch (e) {
       debugPrint('Failed to save tasks: $e');
+      return false;
     }
+  }
+
+  /// Hitung ulang urgensi/ranking SAW tanpa menjalankan scheduler (murah,
+  /// aman dipanggil sering — mis. saat app resume atau berkala/Fase 7).
+  void refreshUrgensi() {
+    _recalculateSAW();
+    notifyListeners();
   }
 
   void _recalculateSAW() {
@@ -346,7 +478,7 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _saveSchedule() async {
+  Future<bool> _saveSchedule() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final blocksJson =
@@ -354,8 +486,10 @@ class TaskProvider with ChangeNotifier {
       await prefs.setString('tugasku_schedule_blocks', blocksJson);
       final configJson = jsonEncode(_scheduleConfig.toJson());
       await prefs.setString('tugasku_schedule_config', configJson);
+      return true;
     } catch (e) {
       debugPrint('Error saving schedule: $e');
+      return false;
     }
   }
 
@@ -419,11 +553,14 @@ class TaskProvider with ChangeNotifier {
     _timeBlocks = updatedBlocks;
   }
 
-  Future<void> updateScheduleConfig(ScheduleConfig config) async {
+  /// Return `true` bila konfigurasi berhasil tersimpan, `false` bila gagal
+  /// (Issue #7) — UI wajib menampilkan ini ke user.
+  Future<bool> updateScheduleConfig(ScheduleConfig config) async {
     _scheduleConfig = config;
-    await _saveSchedule();
+    final saved = await _saveSchedule();
     await _runScheduler();
     notifyListeners();
+    return saved;
   }
 
   Future<({bool success, String? error})> moveTimeBlock(
@@ -496,9 +633,13 @@ class TaskProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> tambahTugas({
+  /// Return `true` bila tugas berhasil ditambah & tersimpan, `false` bila
+  /// penyimpanan gagal (lihat [_saveTasks]) — UI wajib menampilkan ini ke
+  /// user, bukan mengasumsikan sukses.
+  Future<bool> tambahTugas({
     required String namaTugas,
     required String lingkupTugas,
+    String? mataKuliah,
     required DateTime deadline,
     required int tingkatKepentingan,
     required int estimasiWaktu,
@@ -511,6 +652,7 @@ class TaskProvider with ChangeNotifier {
       id: _uuid.v4(),
       namaTugas: namaTugas,
       lingkupTugas: lingkupTugas,
+      mataKuliah: mataKuliah,
       deadline: deadline,
       tingkatKepentingan: tingkatKepentingan,
       // tingkatUrgensi dihitung otomatis di constructor Task
@@ -524,7 +666,7 @@ class TaskProvider with ChangeNotifier {
     _tasks.add(task);
     _recalculateSAW();
     await _runScheduler();
-    await _saveTasks();
+    final saved = await _saveTasks();
     if (_notifEnabled) {
       await _notifService.scheduleTaskNotifications(task);
       if (_dailyReminderEnabled) {
@@ -536,12 +678,44 @@ class TaskProvider with ChangeNotifier {
       }
     }
     notifyListeners();
+    return saved;
   }
 
-  Future<void> editTugas(
+  /// Re-insert tugas yang sebelumnya dihapus, mempertahankan id aslinya
+  /// (dipakai untuk fitur "Urungkan" setelah hapus — lihat [hapusTugas]).
+  Future<bool> restoreTugas(Task task) async {
+    if (_tasks.any((t) => t.id == task.id)) return false;
+    _tasks.add(task);
+    _recalculateSAW();
+    await _runScheduler();
+    final saved = await _saveTasks();
+    if (_notifEnabled) {
+      await _notifService.scheduleTaskNotifications(task);
+    }
+    notifyListeners();
+    return saved;
+  }
+
+  /// Tambahkan akumulasi menit fokus (dari sesi Pomodoro yang selesai) ke
+  /// tugas [taskId]. Tidak mengubah status tugas.
+  Future<void> addFocusMinutes(String taskId, int minutes) async {
+    final index = _tasks.indexWhere((t) => t.id == taskId);
+    if (index == -1 || minutes <= 0) return;
+    _tasks[index] = _tasks[index].copyWith(
+      totalFocusMinutes: _tasks[index].totalFocusMinutes + minutes,
+    );
+    await _saveTasks();
+    notifyListeners();
+  }
+
+  /// Return `true` bila perubahan berhasil tersimpan, `false` bila id tidak
+  /// ditemukan atau penyimpanan gagal.
+  Future<bool> editTugas(
     String id, {
     String? namaTugas,
     String? lingkupTugas,
+    String? mataKuliah,
+    bool clearMataKuliah = false,
     DateTime? deadline,
     int? tingkatKepentingan,
     int? estimasiWaktu,
@@ -552,36 +726,43 @@ class TaskProvider with ChangeNotifier {
     List<String>? notifSchedule,
   }) async {
     final index = _tasks.indexWhere((t) => t.id == id);
-    if (index != -1) {
-      _tasks[index] = _tasks[index].copyWith(
-        namaTugas: namaTugas,
-        lingkupTugas: lingkupTugas,
-        deadline: deadline,
-        tingkatKepentingan: tingkatKepentingan,
-        estimasiWaktu: estimasiWaktu,
-        status: status,
-        category: category,
-        catatan: catatan,
-        notifEnabled: notifEnabled,
-        notifSchedule: notifSchedule,
-      );
-      _recalculateSAW();
+    if (index == -1) return false;
 
-      if (status == TaskStatus.selesai) {
-        _timeBlocks.removeWhere((block) => block.taskId == id);
-        await _saveSchedule();
-      }
+    _tasks[index] = _tasks[index].copyWith(
+      namaTugas: namaTugas,
+      lingkupTugas: lingkupTugas,
+      mataKuliah: mataKuliah,
+      clearMataKuliah: clearMataKuliah,
+      deadline: deadline,
+      tingkatKepentingan: tingkatKepentingan,
+      estimasiWaktu: estimasiWaktu,
+      status: status,
+      category: category,
+      catatan: catatan,
+      notifEnabled: notifEnabled,
+      notifSchedule: notifSchedule,
+    );
+    _recalculateSAW();
 
-      await _runScheduler();
-      await _saveTasks();
-      if (_notifEnabled) {
-        await _notifService.scheduleTaskNotifications(_tasks[index]);
-      }
-      notifyListeners();
+    if (status == TaskStatus.selesai) {
+      _timeBlocks.removeWhere((block) => block.taskId == id);
+      await _saveSchedule();
     }
+
+    await _runScheduler();
+    final saved = await _saveTasks();
+    if (_notifEnabled) {
+      await _notifService.scheduleTaskNotifications(_tasks[index]);
+    }
+    notifyListeners();
+    return saved;
   }
 
-  Future<void> hapusTugas(String id) async {
+  /// Return `true` bila tugas berhasil dihapus & tersimpan, `false` bila id
+  /// tidak ditemukan atau penyimpanan gagal.
+  Future<bool> hapusTugas(String id) async {
+    if (!_tasks.any((t) => t.id == id)) return false;
+
     try {
       await _notifService.cancelTaskNotifications(id);
     } catch (e) {
@@ -591,8 +772,9 @@ class TaskProvider with ChangeNotifier {
     _tasks.removeWhere((t) => t.id == id);
     _recalculateSAW();
     await _runScheduler();
-    await _saveTasks();
+    final saved = await _saveTasks();
     notifyListeners();
+    return saved;
   }
 
   Future<void> updateStatus(String id, TaskStatus status) async {
@@ -604,5 +786,116 @@ class TaskProvider with ChangeNotifier {
     _tasks.clear();
     await _saveTasks();
     notifyListeners();
+  }
+
+  // ─────────────────────────────────────────────
+  // EKSPOR & IMPOR DATA (Issue #6)
+  // ─────────────────────────────────────────────
+
+  static const int _exportFormatVersion = 1;
+
+  /// Bundel seluruh data pengguna (tugas, lingkup, kategori per-lingkup,
+  /// konfigurasi jadwal, pengaturan notifikasi) jadi satu Map siap
+  /// di-jsonEncode. Dipakai untuk backup manual sebelum ganti perangkat
+  /// atau uninstall.
+  Map<String, dynamic> exportData() {
+    return {
+      'formatVersion': _exportFormatVersion,
+      'exportedAt': DateTime.now().toIso8601String(),
+      'tasks': _tasks.map((t) => t.toJson()).toList(),
+      'customScopes': _customScopes,
+      'categoriesByScope': _categoriesByScope,
+      'scheduleConfig': _scheduleConfig.toJson(),
+      'notifSettings': {
+        'notifEnabled': _notifEnabled,
+        'dailyReminderEnabled': _dailyReminderEnabled,
+        'dailyReminderHour': _dailyReminderHour,
+        'dailyReminderMinute': _dailyReminderMinute,
+      },
+    };
+  }
+
+  /// Terapkan data hasil ekspor, MENGGANTIKAN seluruh data saat ini.
+  /// Parsing dilakukan ke variabel lokal dulu — kalau ADA bagian yang
+  /// gagal/tidak valid, seluruh proses dibatalkan dan data yang sedang
+  /// berjalan tidak tersentuh sama sekali (tidak ada penerapan sebagian).
+  Future<({bool success, String? error})> importData(
+    Map<String, dynamic> json,
+  ) async {
+    try {
+      final version = json['formatVersion'];
+      if (version is! int || version > _exportFormatVersion) {
+        return (
+          success: false,
+          error: 'Format file tidak dikenali atau berasal dari versi aplikasi yang lebih baru.'
+        );
+      }
+
+      final rawTasks = json['tasks'];
+      final rawScopes = json['customScopes'];
+      final rawCategories = json['categoriesByScope'];
+      if (rawTasks is! List || rawScopes is! List || rawCategories is! Map) {
+        return (success: false, error: 'Struktur file tidak lengkap atau rusak.');
+      }
+
+      final newTasks = rawTasks
+          .map((t) => Task.fromJson(t as Map<String, dynamic>))
+          .toList();
+      final newScopes = List<String>.from(rawScopes);
+      final newCategories = rawCategories.map(
+        (scope, cats) =>
+            MapEntry(scope as String, List<String>.from(cats as List)),
+      );
+
+      ScheduleConfig? newScheduleConfig;
+      final rawConfig = json['scheduleConfig'];
+      if (rawConfig is Map<String, dynamic>) {
+        newScheduleConfig = ScheduleConfig.fromJson(rawConfig);
+      }
+
+      final rawNotif = json['notifSettings'];
+      var newNotifEnabled = _notifEnabled;
+      var newDailyReminderEnabled = _dailyReminderEnabled;
+      var newDailyReminderHour = _dailyReminderHour;
+      var newDailyReminderMinute = _dailyReminderMinute;
+      if (rawNotif is Map<String, dynamic>) {
+        newNotifEnabled = rawNotif['notifEnabled'] as bool? ?? newNotifEnabled;
+        newDailyReminderEnabled =
+            rawNotif['dailyReminderEnabled'] as bool? ?? newDailyReminderEnabled;
+        newDailyReminderHour =
+            rawNotif['dailyReminderHour'] as int? ?? newDailyReminderHour;
+        newDailyReminderMinute =
+            rawNotif['dailyReminderMinute'] as int? ?? newDailyReminderMinute;
+      }
+
+      // Semua berhasil di-parse — baru terapkan.
+      await _notifService.cancelAllNotifications();
+      _tasks = newTasks;
+      _customScopes = newScopes;
+      _categoriesByScope = newCategories;
+      if (newScheduleConfig != null) _scheduleConfig = newScheduleConfig;
+      _notifEnabled = newNotifEnabled;
+      _dailyReminderEnabled = newDailyReminderEnabled;
+      _dailyReminderHour = newDailyReminderHour;
+      _dailyReminderMinute = newDailyReminderMinute;
+
+      _recalculateSAW();
+      await _runScheduler();
+      await _saveTasks();
+      await _saveCustomData();
+      await _saveSchedule();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('notif_enabled', _notifEnabled);
+      await prefs.setBool('daily_reminder_enabled', _dailyReminderEnabled);
+      await prefs.setInt('daily_reminder_hour', _dailyReminderHour);
+      await prefs.setInt('daily_reminder_minute', _dailyReminderMinute);
+      if (_notifEnabled) await _rescheduleAllNotifications();
+
+      notifyListeners();
+      return (success: true, error: null);
+    } catch (e) {
+      return (success: false, error: 'Gagal membaca file: $e');
+    }
   }
 }

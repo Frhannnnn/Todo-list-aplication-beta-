@@ -14,8 +14,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tugasku/models/schedule_config_model.dart';
-import 'package:tugasku/models/task_model.dart';
-import 'package:tugasku/models/time_block_model.dart';
 import 'package:tugasku/screens/schedule_screen.dart';
 import 'package:tugasku/services/task_provider.dart';
 
