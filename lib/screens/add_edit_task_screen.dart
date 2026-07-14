@@ -970,7 +970,20 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       );
     }
 
-    if (!saved || !mounted) return;
+    if (!mounted) return;
+
+    if (!saved) {
+      // Gagal simpan tidak boleh diam-diam (Issue #7) — tetap di form
+      // supaya input user tidak hilang, dan beri tahu jelas bahwa harus
+      // dicoba lagi.
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal menyimpan — coba lagi'),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+      return;
+    }
 
     // Selalu kembali ke tab "Data Tugas" apa pun layar asal form ini dibuka
     // (FAB di TaskListScreen/CalendarScreen, atau tap-to-edit di manapun).
@@ -1003,7 +1016,19 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
               final provider = context.read<TaskProvider>();
               final deleted = await provider.hapusTugas(widget.task!.id);
               if (c.mounted) Navigator.pop(c);
-              if (!deleted || !mounted) return;
+              if (!mounted) return;
+
+              if (!deleted) {
+                // Gagal hapus tidak boleh diam-diam (Issue #7).
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Gagal menghapus — coba lagi'),
+                    backgroundColor: AppTheme.danger,
+                  ),
+                );
+                return;
+              }
+
               MainNavigation.tabIndex.value = MainNavigation.taskListTab;
               Navigator.popUntil(context, (route) => route.isFirst);
               rootScaffoldMessengerKey.currentState?.showSnackBar(

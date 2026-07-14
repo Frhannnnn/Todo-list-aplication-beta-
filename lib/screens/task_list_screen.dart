@@ -348,12 +348,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
             child: const Text('Batal'),
           ),
           ElevatedButton(
-            onPressed: () {
-              provider.hapusTugas(task.id);
-              Navigator.pop(context);
+            onPressed: () async {
+              final deleted = await provider.hapusTugas(task.id);
+              if (context.mounted) Navigator.pop(context);
+              if (!ctx.mounted) return;
               ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('Tugas berhasil dihapus'),
+                SnackBar(
+                  content: Text(deleted
+                      ? 'Tugas berhasil dihapus'
+                      : 'Gagal menghapus — coba lagi'),
                   backgroundColor: AppTheme.danger,
                 ),
               );

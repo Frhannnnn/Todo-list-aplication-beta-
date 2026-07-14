@@ -478,7 +478,7 @@ class TaskProvider with ChangeNotifier {
     }
   }
 
-  Future<void> _saveSchedule() async {
+  Future<bool> _saveSchedule() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final blocksJson =
@@ -486,8 +486,10 @@ class TaskProvider with ChangeNotifier {
       await prefs.setString('tugasku_schedule_blocks', blocksJson);
       final configJson = jsonEncode(_scheduleConfig.toJson());
       await prefs.setString('tugasku_schedule_config', configJson);
+      return true;
     } catch (e) {
       debugPrint('Error saving schedule: $e');
+      return false;
     }
   }
 
@@ -551,11 +553,14 @@ class TaskProvider with ChangeNotifier {
     _timeBlocks = updatedBlocks;
   }
 
-  Future<void> updateScheduleConfig(ScheduleConfig config) async {
+  /// Return `true` bila konfigurasi berhasil tersimpan, `false` bila gagal
+  /// (Issue #7) — UI wajib menampilkan ini ke user.
+  Future<bool> updateScheduleConfig(ScheduleConfig config) async {
     _scheduleConfig = config;
-    await _saveSchedule();
+    final saved = await _saveSchedule();
     await _runScheduler();
     notifyListeners();
+    return saved;
   }
 
   Future<({bool success, String? error})> moveTimeBlock(
