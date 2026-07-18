@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/task_provider.dart';
+import 'services/focus_session_provider.dart';
 import 'utils/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/task_list_screen.dart';
@@ -36,8 +37,11 @@ class TugasKuApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => TaskProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TaskProvider()),
+        ChangeNotifierProvider(create: (_) => FocusSessionProvider()),
+      ],
       child: MaterialApp(
         title: 'TugasKu',
         debugShowCheckedModeBanner: false,
