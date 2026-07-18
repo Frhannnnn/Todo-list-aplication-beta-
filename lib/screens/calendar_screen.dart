@@ -92,6 +92,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  void _goToToday() {
+    final now = DateTime.now();
+    setState(() {
+      _visibleMonth = DateTime(now.year, now.month);
+      _selectedDate = DateTime(now.year, now.month, now.day);
+    });
+  }
+
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -106,16 +114,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
               color: AppTheme.textPrimary,
             ),
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.border),
+          GestureDetector(
+            onTap: _goToToday,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.border),
+              ),
+              child: const Icon(Icons.today_rounded,
+                  color: AppTheme.textSecondary, size: 20),
             ),
-            child: const Icon(Icons.today_rounded,
-                color: AppTheme.textSecondary, size: 20),
           ),
         ],
       ),

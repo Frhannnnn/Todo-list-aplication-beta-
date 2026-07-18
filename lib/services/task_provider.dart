@@ -88,6 +88,34 @@ class TaskProvider with ChangeNotifier {
     return (tugasSelesai / totalTugas) * 100;
   }
 
+  /// Streak = jumlah hari berturut-turut (berakhir hari ini atau kemarin) di
+  /// mana minimal satu tugas ditandai selesai. Hanya menghitung tugas yang
+  /// punya [Task.completedAt] — tugas yang sudah selesai sebelum fitur ini ada
+  /// (tanpa timestamp) tidak ikut dihitung, jadi streak tumbuh dari sekarang.
+  int get currentStreak {
+    final completedDays = _tasks
+        .where((t) => t.completedAt != null)
+        .map((t) => DateTime(
+            t.completedAt!.year, t.completedAt!.month, t.completedAt!.day))
+        .toSet();
+    if (completedDays.isEmpty) return 0;
+
+    final now = DateTime.now();
+    var cursor = DateTime(now.year, now.month, now.day);
+    // Streak masih "hidup" bila selesai hari ini ATAU kemarin.
+    if (!completedDays.contains(cursor)) {
+      cursor = cursor.subtract(const Duration(days: 1));
+      if (!completedDays.contains(cursor)) return 0;
+    }
+
+    var streak = 0;
+    while (completedDays.contains(cursor)) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
+
   // Smart Scheduling getters
   List<TimeBlock> get timeBlocks => List.unmodifiable(_timeBlocks);
   ScheduleConfig get scheduleConfig => _scheduleConfig;
@@ -728,6 +756,20 @@ class TaskProvider with ChangeNotifier {
     final index = _tasks.indexWhere((t) => t.id == id);
     if (index == -1) return false;
 
+    // Catat/hapus waktu penyelesaian saat status berpindah ke/dari 'selesai'
+    // (dipakai untuk menghitung streak di Dashboard). Hanya berubah saat
+    // status benar-benar transisi, bukan tiap edit.
+    final oldStatus = _tasks[index].status;
+    DateTime? completedAt;
+    var clearCompletedAt = false;
+    if (status != null && status != oldStatus) {
+      if (status == TaskStatus.selesai) {
+        completedAt = DateTime.now();
+      } else if (oldStatus == TaskStatus.selesai) {
+        clearCompletedAt = true;
+      }
+    }
+
     _tasks[index] = _tasks[index].copyWith(
       namaTugas: namaTugas,
       lingkupTugas: lingkupTugas,
@@ -739,6 +781,8 @@ class TaskProvider with ChangeNotifier {
       status: status,
       category: category,
       catatan: catatan,
+      completedAt: completedAt,
+      clearCompletedAt: clearCompletedAt,
       notifEnabled: notifEnabled,
       notifSchedule: notifSchedule,
     );

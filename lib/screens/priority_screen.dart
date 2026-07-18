@@ -326,6 +326,8 @@ class _QuadrantCard extends StatelessWidget {
                     children: [
                       Text(
                         config.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -334,6 +336,8 @@ class _QuadrantCard extends StatelessWidget {
                       ),
                       Text(
                         config.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 10,
                           color: AppTheme.textSecondary,
@@ -357,6 +361,8 @@ class _QuadrantCard extends StatelessWidget {
               ),
               child: Text(
                 config.action,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: config.color,
                   fontSize: 11,

@@ -25,6 +25,7 @@ class Task {
   String category;        // String bebas (custom)
   String? catatan;
   DateTime createdAt;
+  DateTime? completedAt;  // kapan tugas ditandai selesai (untuk streak); null bila belum
   int totalFocusMinutes;  // akumulasi menit fokus dari sesi Pomodoro
 
   // Notifikasi per-tugas
@@ -48,6 +49,7 @@ class Task {
     this.category = 'Tugas',
     this.catatan,
     required this.createdAt,
+    this.completedAt,
     this.notifEnabled = true,
     List<String>? notifSchedule,
     this.sawScore = 0.0,
@@ -120,6 +122,7 @@ class Task {
       'category': category,
       'catatan': catatan,
       'createdAt': createdAt.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
       'notifEnabled': notifEnabled,
       'notifSchedule': notifSchedule,
       'sawScore': sawScore,
@@ -168,6 +171,9 @@ class Task {
       category: category,
       catatan: json['catatan'],
       createdAt: DateTime.parse(json['createdAt']),
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'] as String)
+          : null,
       notifEnabled: json['notifEnabled'] as bool? ?? true,
       notifSchedule: notifSchedule,
       sawScore: (json['sawScore'] as num).toDouble(),
@@ -188,6 +194,8 @@ class Task {
     TaskStatus? status,
     String? category,
     String? catatan,
+    DateTime? completedAt,
+    bool clearCompletedAt = false,
     bool? notifEnabled,
     List<String>? notifSchedule,
     double? sawScore,
@@ -211,6 +219,7 @@ class Task {
       category: category ?? this.category,
       catatan: catatan ?? this.catatan,
       createdAt: createdAt,
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
       notifEnabled: notifEnabled ?? this.notifEnabled,
       notifSchedule: notifSchedule ?? List.from(this.notifSchedule),
       sawScore: sawScore ?? this.sawScore,
