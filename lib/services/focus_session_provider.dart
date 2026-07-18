@@ -6,16 +6,20 @@ import '../models/focus_session_model.dart';
 import '../models/task_model.dart';
 import 'focus_timer_service.dart';
 import 'focus_session_repository.dart';
+import 'notification_service.dart';
 import 'task_provider.dart';
 
 /// Orkestrasi sesi fokus multi-siklus: mengendalikan [FocusTimerService],
-/// menyimpan snapshot lewat [FocusSessionRepository], dan mengekspos state (via
-/// [FocusSessionState]) ke UI. Seluruh business logic sesi fokus ada di sini —
-/// widget hanya memanggil method ini.
+/// menyimpan snapshot lewat [FocusSessionRepository], menampilkan foreground
+/// notification, dan mengekspos state (via [FocusSessionState]) ke UI. Seluruh
+/// business logic sesi fokus ada di sini — widget hanya memanggil method ini.
 class FocusSessionProvider with ChangeNotifier {
   final FocusTimerService _timer = FocusTimerService();
   final FocusSessionRepository _repo = FocusSessionRepository();
+  final NotificationService _notif = NotificationService();
   final _uuid = const Uuid();
+
+  TaskProvider? _taskRef;
 
   FocusSession? _active;
   Duration _remaining = Duration.zero;
@@ -41,13 +45,25 @@ class FocusSessionProvider with ChangeNotifier {
       notifyListeners();
     };
     _timer.onFinished = _handleTimerFinished;
+    _notif.onFocusAction = _onNotifAction;
+  }
+
+  /// Dipasang sekali dari root agar aksi notifikasi & akumulasi menit bisa
+  /// mengakses TaskProvider tanpa BuildContext.
+  void attachTaskProvider(TaskProvider tp) => _taskRef = tp;
+
+  void _onNotifAction(String actionId) {
+    if (actionId == 'focus_pause') {
+      pauseResume();
+    } else if (actionId == 'focus_end') {
+      endSession(taskProvider: _taskRef);
+    }
   }
 
   void _handleTimerFinished() {
     if (_state == FocusSessionState.running) {
       final s = _active;
       if (s != null) _accumulatedFocusMinutes += s.focusMinutes;
-      // Auto-advance hanya untuk blok fokus non-terakhir.
       if ((s?.autoAdvance ?? false) && hasNextSession) {
         if ((s?.breakMinutes ?? 0) > 0) {
           startBreak();
@@ -58,6 +74,7 @@ class FocusSessionProvider with ChangeNotifier {
         _state = FocusSessionState.completed;
         _remaining = Duration.zero;
         _persist();
+        _cancelNotification();
         notifyListeners();
       }
     } else if (_state == FocusSessionState.breakTime) {
@@ -102,6 +119,7 @@ class FocusSessionProvider with ChangeNotifier {
     _remaining = total;
     _timer.start(total);
     _persist();
+    _updateNotification();
     notifyListeners();
   }
 
@@ -118,6 +136,7 @@ class FocusSessionProvider with ChangeNotifier {
     }
     _remaining = _timer.remaining;
     _persist();
+    _updateNotification();
     notifyListeners();
   }
 
@@ -130,6 +149,7 @@ class FocusSessionProvider with ChangeNotifier {
     _remaining = total;
     _timer.start(total);
     _persist();
+    _updateNotification();
     notifyListeners();
   }
 
@@ -146,11 +166,29 @@ class FocusSessionProvider with ChangeNotifier {
     _startFocusTimer();
   }
 
+  /// Sinkronkan setelah app kembali foreground: waktu dihitung dari timestamp,
+  /// jadi tetap akurat walau Dart sempat dijeda OS. Picu penyelesaian bila
+  /// blok/istirahat sudah habis saat app di background.
+  void syncFromBackground() {
+    if (_state != FocusSessionState.running &&
+        _state != FocusSessionState.breakTime) {
+      return;
+    }
+    _remaining = _timer.remaining;
+    if (_timer.isFinished) {
+      _handleTimerFinished();
+    } else {
+      _updateNotification();
+      notifyListeners();
+    }
+  }
+
   /// Akhiri (batalkan) sesi. Menit fokus dari blok yang sudah selesai tetap
   /// dihitung ke tugas.
   Future<void> endSession({TaskProvider? taskProvider}) async {
     _addAccumulatedMinutes(taskProvider);
     _timer.pause();
+    _cancelNotification();
     _reset();
     await _repo.clearActive();
     notifyListeners();
@@ -164,6 +202,7 @@ class FocusSessionProvider with ChangeNotifier {
   }) async {
     _addAccumulatedMinutes(taskProvider);
     _timer.pause();
+    _cancelNotification();
     _reset();
     await _repo.clearActive();
     notifyListeners();
@@ -172,7 +211,8 @@ class FocusSessionProvider with ChangeNotifier {
   void _addAccumulatedMinutes(TaskProvider? taskProvider) {
     final s = _active;
     if (s != null && _accumulatedFocusMinutes > 0) {
-      taskProvider?.addFocusMinutes(s.taskId, _accumulatedFocusMinutes);
+      (taskProvider ?? _taskRef)
+          ?.addFocusMinutes(s.taskId, _accumulatedFocusMinutes);
     }
   }
 
@@ -187,14 +227,48 @@ class FocusSessionProvider with ChangeNotifier {
   void _persist() {
     final session = _active;
     if (session == null) return;
+    final isTiming = _state == FocusSessionState.running ||
+        _state == FocusSessionState.breakTime;
     _repo.saveActive(
       ActiveSessionSnapshot(
         session: session,
         remainingSeconds: _remaining.inSeconds,
         currentSession: _currentSession,
         accumulatedFocusMinutes: _accumulatedFocusMinutes,
+        state: _state,
+        endAtEpochMs: isTiming ? _timer.endAt?.millisecondsSinceEpoch : null,
       ),
     );
+  }
+
+  void _updateNotification() {
+    final s = _active;
+    if (s == null) return;
+    try {
+      _notif.showFocusNotification(
+        taskName: _taskNameFor(s.taskId),
+        remaining: _remaining,
+        running: _state == FocusSessionState.running ||
+            _state == FocusSessionState.breakTime,
+        isBreak: _state == FocusSessionState.breakTime,
+      );
+    } catch (_) {
+      // Platform tanpa notifikasi (mis. web) — abaikan.
+    }
+  }
+
+  void _cancelNotification() {
+    try {
+      _notif.cancelFocusNotification();
+    } catch (_) {}
+  }
+
+  String _taskNameFor(String taskId) {
+    final list = _taskRef?.tasks ?? const <Task>[];
+    for (final t in list) {
+      if (t.id == taskId) return t.namaTugas;
+    }
+    return 'Tugas';
   }
 
   @override

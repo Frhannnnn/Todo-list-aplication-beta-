@@ -180,12 +180,16 @@ class ActiveSessionSnapshot {
   final int remainingSeconds;
   final int currentSession;
   final int accumulatedFocusMinutes;
+  final FocusSessionState state;
+  final int? endAtEpochMs; // waktu selesai absolut saat running/breakTime
 
   const ActiveSessionSnapshot({
     required this.session,
     required this.remainingSeconds,
     this.currentSession = 1,
     this.accumulatedFocusMinutes = 0,
+    this.state = FocusSessionState.idle,
+    this.endAtEpochMs,
   });
 
   Map<String, dynamic> toJson() => {
@@ -193,14 +197,24 @@ class ActiveSessionSnapshot {
         'remainingSeconds': remainingSeconds,
         'currentSession': currentSession,
         'accumulatedFocusMinutes': accumulatedFocusMinutes,
+        'state': state.index,
+        'endAtEpochMs': endAtEpochMs,
       };
 
   factory ActiveSessionSnapshot.fromJson(Map<String, dynamic> json) {
+    final rawState = json['state'];
+    final state = (rawState is int &&
+            rawState >= 0 &&
+            rawState < FocusSessionState.values.length)
+        ? FocusSessionState.values[rawState]
+        : FocusSessionState.idle;
     return ActiveSessionSnapshot(
       session: FocusSession.fromJson(json['session'] as Map<String, dynamic>),
       remainingSeconds: json['remainingSeconds'] as int? ?? 0,
       currentSession: json['currentSession'] as int? ?? 1,
       accumulatedFocusMinutes: json['accumulatedFocusMinutes'] as int? ?? 0,
+      state: state,
+      endAtEpochMs: json['endAtEpochMs'] as int?,
     );
   }
 }

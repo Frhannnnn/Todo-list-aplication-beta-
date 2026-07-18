@@ -20,6 +20,13 @@ class NotificationService {
   static const String _channelIdDeadline = 'tugasku_deadline';
   static const String _channelIdReminder = 'tugasku_reminder';
   static const String _channelIdOverdue = 'tugasku_overdue';
+  static const String _channelIdFocus = 'tugasku_focus';
+
+  // ID notifikasi sesi fokus (foreground)
+  static const int _focusNotifId = 8888;
+
+  /// Dipanggil saat aksi notifikasi sesi fokus ditekan ('focus_pause'/'focus_end').
+  void Function(String actionId)? onFocusAction;
 
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -81,15 +88,82 @@ class NotificationService {
       enableVibration: true,
     );
 
+    const focus = AndroidNotificationChannel(
+      _channelIdFocus,
+      'Sesi Fokus',
+      description: 'Notifikasi sesi fokus yang sedang berjalan',
+      importance: Importance.low,
+      playSound: false,
+    );
+
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     await androidPlugin?.createNotificationChannel(deadline);
     await androidPlugin?.createNotificationChannel(reminder);
     await androidPlugin?.createNotificationChannel(overdue);
+    await androidPlugin?.createNotificationChannel(focus);
   }
 
   void _onNotificationTap(NotificationResponse response) {
-    debugPrint('Notifikasi ditekan: ${response.payload}');
+    final actionId = response.actionId;
+    if (actionId != null && actionId.isNotEmpty) {
+      onFocusAction?.call(actionId);
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // NOTIFIKASI SESI FOKUS (foreground, ongoing)
+  // ─────────────────────────────────────────────
+
+  /// Tampilkan/perbarui notifikasi sesi fokus yang sedang berjalan.
+  /// Saat [running], memakai chronometer Android (hitung mundur native).
+  Future<void> showFocusNotification({
+    required String taskName,
+    required Duration remaining,
+    required bool running,
+    required bool isBreak,
+  }) async {
+    if (!_isInitialized) await initialize();
+
+    final title = isBreak ? '☕ Istirahat' : '🎯 Sedang Fokus';
+    final body = running
+        ? taskName
+        : '$taskName • Dijeda (${_fmtDuration(remaining)})';
+    final endMs = DateTime.now().add(remaining).millisecondsSinceEpoch;
+
+    final android = AndroidNotificationDetails(
+      _channelIdFocus,
+      'Sesi Fokus',
+      channelDescription: 'Sesi fokus berjalan',
+      importance: Importance.low,
+      priority: Priority.low,
+      ongoing: true,
+      autoCancel: false,
+      onlyAlertOnce: true,
+      showWhen: running,
+      usesChronometer: running,
+      chronometerCountDown: running,
+      when: running ? endMs : null,
+      actions: <AndroidNotificationAction>[
+        AndroidNotificationAction('focus_pause', running ? 'Jeda' : 'Lanjut'),
+        const AndroidNotificationAction('focus_end', 'Akhiri'),
+      ],
+    );
+
+    await _plugin.show(
+      _focusNotifId,
+      title,
+      body,
+      NotificationDetails(android: android),
+    );
+  }
+
+  Future<void> cancelFocusNotification() => _plugin.cancel(_focusNotifId);
+
+  String _fmtDuration(Duration d) {
+    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
+    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
+    return '$m:$s';
   }
 
   /// Minta izin notifikasi (Android 13+)

@@ -94,6 +94,14 @@ class _MainNavigationState extends State<MainNavigation>
       const Duration(minutes: 5),
       (_) => context.read<TaskProvider>().refreshUrgensi(),
     );
+    // Hubungkan FocusSessionProvider ke TaskProvider (untuk aksi notifikasi &
+    // akumulasi menit fokus tanpa BuildContext).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context
+          .read<FocusSessionProvider>()
+          .attachTaskProvider(context.read<TaskProvider>());
+    });
   }
 
   @override
@@ -112,6 +120,7 @@ class _MainNavigationState extends State<MainNavigation>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       context.read<TaskProvider>().refreshUrgensi();
+      context.read<FocusSessionProvider>().syncFromBackground();
     }
   }
 

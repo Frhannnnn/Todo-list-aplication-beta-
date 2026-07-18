@@ -16,6 +16,9 @@ class FocusTimerService {
 
   bool get isRunning => _isRunning;
 
+  /// Waktu selesai absolut saat sedang berjalan (untuk persistensi/restore).
+  DateTime? get endAt => _isRunning ? _endAt : null;
+
   Duration get remaining {
     if (_isRunning && _endAt != null) {
       final left = _endAt!.difference(DateTime.now());
