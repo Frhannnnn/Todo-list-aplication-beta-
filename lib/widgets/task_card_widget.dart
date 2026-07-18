@@ -95,6 +95,10 @@ class TaskCardWidget extends StatelessWidget {
             Row(
               children: [
                 _buildCategoryTag(),
+                if (task.recurrence != RecurrenceType.none) ...[
+                  const SizedBox(width: 6),
+                  _buildRecurringBadge(),
+                ],
                 if (_shouldShowPriorityBadge) ...[
                   const SizedBox(width: 6),
                   _buildPriorityBadge(),
@@ -272,6 +276,19 @@ class TaskCardWidget extends StatelessWidget {
           color: color,
         ),
       ),
+    );
+  }
+
+  Widget _buildRecurringBadge() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppTheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+      ),
+      child: const Icon(Icons.repeat_rounded,
+          size: 12, color: AppTheme.primary),
     );
   }
 
