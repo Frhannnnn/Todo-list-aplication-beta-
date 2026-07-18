@@ -7,6 +7,7 @@ import '../../models/task_model.dart';
 import '../../services/focus_session_provider.dart';
 import '../../services/task_provider.dart';
 import '../../utils/app_theme.dart';
+import 'widgets/focus_info_row.dart';
 
 /// Halaman setelah sesi fokus selesai: menampilkan ringkasan & menanyakan
 /// pencapaian target, lalu menyimpan hasilnya dan menambah menit fokus.
@@ -107,35 +108,22 @@ class _FocusCompleteScreenState extends State<FocusCompleteScreen> {
       ),
       child: Column(
         children: [
-          _infoRow('Durasi sesi', '${session.focusMinutes} menit'),
+          FocusInfoRow(
+              label: 'Durasi sesi',
+              value: '${session.focusMinutes} menit',
+              labelWidth: 96),
           const SizedBox(height: 10),
-          _infoRow('Nama tugas', widget.task.namaTugas),
+          FocusInfoRow(
+              label: 'Nama tugas',
+              value: widget.task.namaTugas,
+              labelWidth: 96),
           const SizedBox(height: 10),
-          _infoRow('Target sesi', session.targetText ?? '-'),
+          FocusInfoRow(
+              label: 'Target sesi',
+              value: session.targetText ?? '-',
+              labelWidth: 96),
         ],
       ),
-    );
-  }
-
-  Widget _infoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 96,
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary)),
-        ),
-        Expanded(
-          child: Text(value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
-        ),
-      ],
     );
   }
 

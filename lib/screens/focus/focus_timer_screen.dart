@@ -9,6 +9,7 @@ import '../../services/focus_session_provider.dart';
 import '../../services/task_provider.dart';
 import '../../utils/app_theme.dart';
 import 'focus_complete_screen.dart';
+import 'widgets/focus_info_row.dart';
 
 /// Layar timer sesi fokus. Mode Fokus mengunci navigasi (PopScope); Mode
 /// Fleksibel membiarkan pengguna keluar. Seluruh logika timer ada di
@@ -127,7 +128,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
                           const SizedBox(height: 20),
                           _taskInfo(session, priorityLabel, estimasi),
                           const SizedBox(height: 28),
-                          _controls(provider, isFocusMode),
+                          _controls(provider),
                           const SizedBox(height: 12),
                           _streakPlaceholder(),
                         ],
@@ -209,47 +210,27 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
       ),
       child: Column(
         children: [
-          _row('Tugas', widget.task.namaTugas),
+          FocusInfoRow(label: 'Tugas', value: widget.task.namaTugas),
           const SizedBox(height: 8),
-          _row('Kategori', widget.task.categoryLabel),
+          FocusInfoRow(label: 'Kategori', value: widget.task.categoryLabel),
           const SizedBox(height: 8),
-          _row('Prioritas', priorityLabel),
+          FocusInfoRow(label: 'Prioritas', value: priorityLabel),
           if (session.targetText != null) ...[
             const SizedBox(height: 8),
-            _row('Target', session.targetText!),
+            FocusInfoRow(label: 'Target', value: session.targetText!),
           ],
           const SizedBox(height: 8),
-          _row('Sesi', 'Sesi 1 dari ${session.recommendedSessions}'),
+          FocusInfoRow(
+              label: 'Sesi',
+              value: 'Sesi 1 dari ${session.recommendedSessions}'),
           const SizedBox(height: 8),
-          _row('Estimasi selesai', estimasi),
+          FocusInfoRow(label: 'Estimasi selesai', value: estimasi),
         ],
       ),
     );
   }
 
-  Widget _row(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 110,
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary)),
-        ),
-        Expanded(
-          child: Text(value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
-        ),
-      ],
-    );
-  }
-
-  Widget _controls(FocusSessionProvider provider, bool isFocusMode) {
+  Widget _controls(FocusSessionProvider provider) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

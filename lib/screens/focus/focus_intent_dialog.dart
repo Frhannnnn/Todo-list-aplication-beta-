@@ -6,10 +6,31 @@ import '../../utils/app_theme.dart';
 /// Dialog kecil untuk menetapkan target sesi (opsional).
 /// Mengembalikan teks target (bisa kosong), atau null bila dibatalkan.
 Future<String?> showFocusIntentDialog(BuildContext context) {
-  final controller = TextEditingController();
   return showDialog<String>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    builder: (_) => const _FocusIntentDialog(),
+  );
+}
+
+class _FocusIntentDialog extends StatefulWidget {
+  const _FocusIntentDialog();
+
+  @override
+  State<_FocusIntentDialog> createState() => _FocusIntentDialogState();
+}
+
+class _FocusIntentDialogState extends State<_FocusIntentDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: const Text('Apa target sesi ini?',
@@ -25,26 +46,26 @@ Future<String?> showFocusIntentDialog(BuildContext context) {
               style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
           const SizedBox(height: 12),
           TextField(
-            controller: controller,
+            controller: _controller,
             autofocus: true,
             textInputAction: TextInputAction.done,
             decoration: const InputDecoration(
               hintText: 'Menyelesaikan Bab II',
             ),
-            onSubmitted: (v) => Navigator.pop(ctx, v),
+            onSubmitted: (v) => Navigator.pop(context, v),
           ),
         ],
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(ctx),
+          onPressed: () => Navigator.pop(context),
           child: const Text('Batal'),
         ),
         ElevatedButton(
-          onPressed: () => Navigator.pop(ctx, controller.text),
+          onPressed: () => Navigator.pop(context, _controller.text),
           child: const Text('Lanjut'),
         ),
       ],
-    ),
-  );
+    );
+  }
 }

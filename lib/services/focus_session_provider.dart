@@ -8,9 +8,10 @@ import 'focus_timer_service.dart';
 import 'focus_session_repository.dart';
 import 'task_provider.dart';
 
-/// Orkestrasi sesi fokus: menghubungkan [FocusTimerService] dengan
-/// [FocusSessionRepository] dan mengekspos state ke UI. Seluruh business logic
-/// sesi fokus berada di sini — widget hanya memanggil method ini.
+/// Orkestrasi sesi fokus: mengendalikan [FocusTimerService], menyimpan snapshot
+/// lewat [FocusSessionRepository], dan mengekspos state (via
+/// [FocusSessionState]) ke UI. Seluruh business logic sesi fokus ada di sini —
+/// widget hanya memanggil method ini.
 class FocusSessionProvider with ChangeNotifier {
   final FocusTimerService _timer = FocusTimerService();
   final FocusSessionRepository _repo = FocusSessionRepository();
@@ -18,12 +19,14 @@ class FocusSessionProvider with ChangeNotifier {
 
   FocusSession? _active;
   Duration _remaining = Duration.zero;
-  bool _finished = false;
+  FocusSessionState _state = FocusSessionState.idle;
 
   FocusSession? get active => _active;
   Duration get remaining => _remaining;
-  bool get isRunning => _timer.isRunning;
-  bool get isFinished => _finished;
+  FocusSessionState get state => _state;
+  bool get isRunning => _state == FocusSessionState.running;
+  bool get isPaused => _state == FocusSessionState.paused;
+  bool get isFinished => _state == FocusSessionState.completed;
   bool get hasActiveSession => _active != null;
 
   FocusSessionProvider() {
@@ -32,7 +35,7 @@ class FocusSessionProvider with ChangeNotifier {
       notifyListeners();
     };
     _timer.onFinished = () {
-      _finished = true;
+      _state = FocusSessionState.completed;
       _remaining = Duration.zero;
       notifyListeners();
     };
@@ -45,7 +48,7 @@ class FocusSessionProvider with ChangeNotifier {
     String? targetText,
     required int recommendedSessions,
   }) {
-    final session = FocusSession(
+    _active = FocusSession(
       id: _uuid.v4(),
       taskId: task.id,
       mode: mode,
@@ -57,8 +60,7 @@ class FocusSessionProvider with ChangeNotifier {
       recommendedSessions: recommendedSessions,
       startedAt: DateTime.now(),
     );
-    _active = session;
-    _finished = false;
+    _state = FocusSessionState.running;
     final total = Duration(minutes: preset.focusMinutes);
     _remaining = total;
     _timer.start(total);
@@ -68,10 +70,12 @@ class FocusSessionProvider with ChangeNotifier {
 
   void pauseResume() {
     if (_active == null) return;
-    if (_timer.isRunning) {
+    if (_state == FocusSessionState.running) {
       _timer.pause();
-    } else {
+      _state = FocusSessionState.paused;
+    } else if (_state == FocusSessionState.paused) {
       _timer.resume();
+      _state = FocusSessionState.running;
     }
     _remaining = _timer.remaining;
     _persist();
@@ -82,7 +86,7 @@ class FocusSessionProvider with ChangeNotifier {
   Future<void> endSession() async {
     _timer.pause();
     _active = null;
-    _finished = false;
+    _state = FocusSessionState.idle;
     _remaining = Duration.zero;
     await _repo.clearActive();
     notifyListeners();
@@ -90,6 +94,7 @@ class FocusSessionProvider with ChangeNotifier {
 
   /// Tandai sesi selesai dengan status pencapaian target. Menambahkan menit
   /// fokus ke tugas terkait (pola existing [TaskProvider.addFocusMinutes]).
+  /// [status] disimpan ke riwayat pada Fase 4.
   Future<void> completeSession(
     SessionTargetStatus status, {
     TaskProvider? taskProvider,
@@ -100,7 +105,7 @@ class FocusSessionProvider with ChangeNotifier {
     }
     _timer.pause();
     _active = null;
-    _finished = false;
+    _state = FocusSessionState.idle;
     _remaining = Duration.zero;
     await _repo.clearActive();
     notifyListeners();
@@ -109,7 +114,12 @@ class FocusSessionProvider with ChangeNotifier {
   void _persist() {
     final session = _active;
     if (session == null) return;
-    _repo.saveActive(session, _remaining.inSeconds);
+    _repo.saveActive(
+      ActiveSessionSnapshot(
+        session: session,
+        remainingSeconds: _remaining.inSeconds,
+      ),
+    );
   }
 
   @override

@@ -10,6 +10,7 @@ import '../../services/focus_session_provider.dart';
 import '../../services/task_provider.dart';
 import '../../utils/app_theme.dart';
 import 'focus_timer_screen.dart';
+import 'widgets/focus_info_row.dart';
 
 /// Halaman persiapan sebelum timer dimulai: menampilkan ringkasan sesi dan
 /// countdown 5 detik (bisa dilewati). Setelah countdown, sesi otomatis dimulai.
@@ -34,7 +35,7 @@ class FocusPreparationScreen extends StatefulWidget {
 }
 
 class _FocusPreparationScreenState extends State<FocusPreparationScreen> {
-  int _count = 5;
+  int _count = kPreparationSeconds;
   bool _started = false;
   Timer? _timer;
 
@@ -135,45 +136,38 @@ class _FocusPreparationScreenState extends State<FocusPreparationScreen> {
       ),
       child: Column(
         children: [
-          _row('Tugas', widget.task.namaTugas),
+          FocusInfoRow(
+              label: 'Tugas',
+              value: widget.task.namaTugas,
+              labelWidth: 120),
           const SizedBox(height: 10),
-          _row('Kategori', widget.task.categoryLabel),
+          FocusInfoRow(
+              label: 'Kategori',
+              value: widget.task.categoryLabel,
+              labelWidth: 120),
           const SizedBox(height: 10),
-          _row('Prioritas', priorityLabel),
+          FocusInfoRow(
+              label: 'Prioritas', value: priorityLabel, labelWidth: 120),
           const SizedBox(height: 10),
-          _row('Durasi sesi', '${widget.preset.focusMinutes} menit'),
+          FocusInfoRow(
+              label: 'Durasi sesi',
+              value: '${widget.preset.focusMinutes} menit',
+              labelWidth: 120),
           const SizedBox(height: 10),
-          _row('Rekomendasi sesi', '${widget.recommendedSessions} sesi'),
+          FocusInfoRow(
+              label: 'Rekomendasi sesi',
+              value: '${widget.recommendedSessions} sesi',
+              labelWidth: 120),
           const SizedBox(height: 10),
-          _row('Estimasi selesai', estimasi),
+          FocusInfoRow(
+              label: 'Estimasi selesai', value: estimasi, labelWidth: 120),
           if (widget.targetText != null) ...[
             const SizedBox(height: 10),
-            _row('Target', widget.targetText!),
+            FocusInfoRow(
+                label: 'Target', value: widget.targetText!, labelWidth: 120),
           ],
         ],
       ),
-    );
-  }
-
-  Widget _row(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 120,
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 13, color: AppTheme.textSecondary)),
-        ),
-        Expanded(
-          child: Text(value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
-        ),
-      ],
     );
   }
 }

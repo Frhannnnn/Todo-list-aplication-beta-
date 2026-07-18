@@ -16,6 +16,21 @@ extension FocusModeLabel on FocusMode {
   }
 }
 
+/// Status siklus hidup sebuah sesi fokus. `preparing` & `breakTime`
+/// dideklarasikan untuk fase berikutnya (belum dipakai di Fase 1).
+enum FocusSessionState {
+  idle,
+  preparing,
+  running,
+  paused,
+  completed,
+  cancelled,
+  breakTime,
+}
+
+/// Lama hitung mundur di halaman persiapan (detik).
+const int kPreparationSeconds = 5;
+
 /// Hasil pencapaian target sebuah sesi fokus.
 enum SessionTargetStatus { achieved, partial, notAchieved }
 
@@ -137,6 +152,29 @@ class FocusSession {
           ? DateTime.parse(json['endedAt'] as String)
           : null,
       targetStatus: targetStatus,
+    );
+  }
+}
+
+/// Snapshot sesi aktif untuk disimpan/dipulihkan (fase restore di masa depan).
+class ActiveSessionSnapshot {
+  final FocusSession session;
+  final int remainingSeconds;
+
+  const ActiveSessionSnapshot({
+    required this.session,
+    required this.remainingSeconds,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'session': session.toJson(),
+        'remainingSeconds': remainingSeconds,
+      };
+
+  factory ActiveSessionSnapshot.fromJson(Map<String, dynamic> json) {
+    return ActiveSessionSnapshot(
+      session: FocusSession.fromJson(json['session'] as Map<String, dynamic>),
+      remainingSeconds: json['remainingSeconds'] as int? ?? 0,
     );
   }
 }

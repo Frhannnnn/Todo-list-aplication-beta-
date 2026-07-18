@@ -4,31 +4,25 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/focus_session_model.dart';
 
-/// Persistensi snapshot sesi fokus yang sedang aktif lewat SharedPreferences.
-/// Dipakai untuk memulihkan sesi saat aplikasi dibuka kembali. History &
-/// Focus Streak ditambahkan pada fase berikutnya (belum dibuat di sini).
+/// Persistensi snapshot sesi fokus aktif lewat SharedPreferences. Hanya membaca
+/// & menulis data (tanpa business logic). Dipakai untuk memulihkan sesi saat
+/// aplikasi dibuka kembali. History & Focus Streak ditambahkan pada fase
+/// berikutnya (belum dibuat di sini).
 class FocusSessionRepository {
   static const String _activeKey = 'focus_active_session';
 
-  Future<void> saveActive(FocusSession session, int remainingSeconds) async {
+  Future<void> saveActive(ActiveSessionSnapshot snapshot) async {
     final prefs = await SharedPreferences.getInstance();
-    final data = {
-      'session': session.toJson(),
-      'remainingSeconds': remainingSeconds,
-    };
-    await prefs.setString(_activeKey, jsonEncode(data));
+    await prefs.setString(_activeKey, jsonEncode(snapshot.toJson()));
   }
 
-  Future<({FocusSession session, int remainingSeconds})?> loadActive() async {
+  Future<ActiveSessionSnapshot?> loadActive() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_activeKey);
     if (raw == null) return null;
     try {
       final data = jsonDecode(raw) as Map<String, dynamic>;
-      final session =
-          FocusSession.fromJson(data['session'] as Map<String, dynamic>);
-      final remaining = data['remainingSeconds'] as int? ?? 0;
-      return (session: session, remainingSeconds: remaining);
+      return ActiveSessionSnapshot.fromJson(data);
     } catch (_) {
       await prefs.remove(_activeKey);
       return null;
