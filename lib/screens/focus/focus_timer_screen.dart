@@ -9,6 +9,7 @@ import '../../services/focus_session_provider.dart';
 import '../../services/task_provider.dart';
 import '../../utils/app_theme.dart';
 import 'focus_complete_screen.dart';
+import 'focus_break_screen.dart';
 import 'widgets/focus_info_row.dart';
 
 /// Layar timer sesi fokus. Mode Fokus mengunci navigasi (PopScope); Mode
@@ -25,6 +26,7 @@ class FocusTimerScreen extends StatefulWidget {
 
 class _FocusTimerScreenState extends State<FocusTimerScreen> {
   bool _navigatedToComplete = false;
+  bool _navigatedToBreak = false;
 
   String _fmt(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -59,7 +61,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
   Future<void> _handleEnd(FocusSessionProvider provider) async {
     final ok = await _confirmEnd();
     if (!ok || !mounted) return;
-    await provider.endSession();
+    await provider.endSession(taskProvider: context.read<TaskProvider>());
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -79,7 +81,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
           );
         }
 
-        // Saat sesi selesai, pindah ke halaman selesai (sekali saja).
+        // Saat blok fokus selesai, pindah ke halaman selesai (sekali saja).
         if (provider.isFinished && !_navigatedToComplete) {
           _navigatedToComplete = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -88,6 +90,19 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
               MaterialPageRoute(
                 builder: (_) => FocusCompleteScreen(
                     task: widget.task, session: session),
+              ),
+            );
+          });
+        }
+
+        // Auto-advance: provider langsung masuk istirahat → pindah ke Break.
+        if (provider.isBreak && !_navigatedToBreak) {
+          _navigatedToBreak = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => FocusBreakScreen(task: widget.task),
               ),
             );
           });
@@ -126,7 +141,8 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
                           const SizedBox(height: 20),
                           _buildRing(progress, remaining),
                           const SizedBox(height: 20),
-                          _taskInfo(session, priorityLabel, estimasi),
+                          _taskInfo(session, priorityLabel, estimasi,
+                              provider.currentSession),
                           const SizedBox(height: 28),
                           _controls(provider),
                           const SizedBox(height: 12),
@@ -198,8 +214,8 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
     );
   }
 
-  Widget _taskInfo(
-      FocusSession session, String priorityLabel, String estimasi) {
+  Widget _taskInfo(FocusSession session, String priorityLabel, String estimasi,
+      int currentSession) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -222,7 +238,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
           const SizedBox(height: 8),
           FocusInfoRow(
               label: 'Sesi',
-              value: 'Sesi 1 dari ${session.recommendedSessions}'),
+              value: 'Sesi $currentSession dari ${session.totalSessions}'),
           const SizedBox(height: 8),
           FocusInfoRow(label: 'Estimasi selesai', value: estimasi),
         ],

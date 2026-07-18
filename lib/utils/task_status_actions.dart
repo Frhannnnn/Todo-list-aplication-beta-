@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
+import '../models/focus_session_model.dart';
 import '../services/task_provider.dart';
 import '../screens/focus/focus_mode_sheet.dart';
 import '../screens/focus/focus_intent_dialog.dart';
@@ -40,6 +41,9 @@ Future<void> _startFocusFlow(
   final totalActive = provider.activeTasks.length;
   final priorityLabel = AppTheme.getPrioritasLabel(task.ranking, totalActive);
   final recommendedSessions = focusRecommendation(priorityLabel).sessions;
+  final totalSessions = selection.mode == FocusMode.custom
+      ? selection.cycles
+      : recommendedSessions;
 
   Navigator.of(context).push(
     MaterialPageRoute(
@@ -49,6 +53,8 @@ Future<void> _startFocusFlow(
         preset: selection.preset,
         targetText: target.trim().isEmpty ? null : target.trim(),
         recommendedSessions: recommendedSessions,
+        totalSessions: totalSessions,
+        autoAdvance: selection.autoAdvance,
       ),
     ),
   );

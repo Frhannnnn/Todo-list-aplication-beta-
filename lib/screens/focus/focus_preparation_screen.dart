@@ -20,6 +20,8 @@ class FocusPreparationScreen extends StatefulWidget {
   final FocusPreset preset;
   final String? targetText;
   final int recommendedSessions;
+  final int totalSessions;
+  final bool autoAdvance;
 
   const FocusPreparationScreen({
     super.key,
@@ -28,6 +30,8 @@ class FocusPreparationScreen extends StatefulWidget {
     required this.preset,
     required this.targetText,
     required this.recommendedSessions,
+    required this.totalSessions,
+    required this.autoAdvance,
   });
 
   @override
@@ -65,6 +69,8 @@ class _FocusPreparationScreenState extends State<FocusPreparationScreen> {
           preset: widget.preset,
           targetText: widget.targetText,
           recommendedSessions: widget.recommendedSessions,
+          totalSessions: widget.totalSessions,
+          autoAdvance: widget.autoAdvance,
         );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
@@ -155,8 +161,8 @@ class _FocusPreparationScreenState extends State<FocusPreparationScreen> {
               labelWidth: 120),
           const SizedBox(height: 10),
           FocusInfoRow(
-              label: 'Rekomendasi sesi',
-              value: '${widget.recommendedSessions} sesi',
+              label: 'Jumlah sesi',
+              value: '${widget.totalSessions} sesi',
               labelWidth: 120),
           const SizedBox(height: 10),
           FocusInfoRow(

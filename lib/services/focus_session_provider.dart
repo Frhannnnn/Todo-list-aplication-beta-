@@ -8,8 +8,8 @@ import 'focus_timer_service.dart';
 import 'focus_session_repository.dart';
 import 'task_provider.dart';
 
-/// Orkestrasi sesi fokus: mengendalikan [FocusTimerService], menyimpan snapshot
-/// lewat [FocusSessionRepository], dan mengekspos state (via
+/// Orkestrasi sesi fokus multi-siklus: mengendalikan [FocusTimerService],
+/// menyimpan snapshot lewat [FocusSessionRepository], dan mengekspos state (via
 /// [FocusSessionState]) ke UI. Seluruh business logic sesi fokus ada di sini —
 /// widget hanya memanggil method ini.
 class FocusSessionProvider with ChangeNotifier {
@@ -20,25 +20,49 @@ class FocusSessionProvider with ChangeNotifier {
   FocusSession? _active;
   Duration _remaining = Duration.zero;
   FocusSessionState _state = FocusSessionState.idle;
+  int _currentSession = 1;
+  int _accumulatedFocusMinutes = 0;
 
   FocusSession? get active => _active;
   Duration get remaining => _remaining;
   FocusSessionState get state => _state;
+  int get currentSession => _currentSession;
   bool get isRunning => _state == FocusSessionState.running;
   bool get isPaused => _state == FocusSessionState.paused;
   bool get isFinished => _state == FocusSessionState.completed;
+  bool get isBreak => _state == FocusSessionState.breakTime;
   bool get hasActiveSession => _active != null;
+  bool get hasNextSession =>
+      _active != null && _currentSession < _active!.totalSessions;
 
   FocusSessionProvider() {
     _timer.onTick = (d) {
       _remaining = d;
       notifyListeners();
     };
-    _timer.onFinished = () {
-      _state = FocusSessionState.completed;
-      _remaining = Duration.zero;
-      notifyListeners();
-    };
+    _timer.onFinished = _handleTimerFinished;
+  }
+
+  void _handleTimerFinished() {
+    if (_state == FocusSessionState.running) {
+      final s = _active;
+      if (s != null) _accumulatedFocusMinutes += s.focusMinutes;
+      // Auto-advance hanya untuk blok fokus non-terakhir.
+      if ((s?.autoAdvance ?? false) && hasNextSession) {
+        if ((s?.breakMinutes ?? 0) > 0) {
+          startBreak();
+        } else {
+          startNextSession();
+        }
+      } else {
+        _state = FocusSessionState.completed;
+        _remaining = Duration.zero;
+        _persist();
+        notifyListeners();
+      }
+    } else if (_state == FocusSessionState.breakTime) {
+      startNextSession();
+    }
   }
 
   void startSession({
@@ -47,6 +71,8 @@ class FocusSessionProvider with ChangeNotifier {
     required FocusPreset preset,
     String? targetText,
     required int recommendedSessions,
+    required int totalSessions,
+    required bool autoAdvance,
   }) {
     _active = FocusSession(
       id: _uuid.v4(),
@@ -58,10 +84,21 @@ class FocusSessionProvider with ChangeNotifier {
           : null,
       focusMinutes: preset.focusMinutes,
       recommendedSessions: recommendedSessions,
+      totalSessions: totalSessions < 1 ? 1 : totalSessions,
+      breakMinutes: preset.breakMinutes,
+      autoAdvance: autoAdvance,
       startedAt: DateTime.now(),
     );
+    _currentSession = 1;
+    _accumulatedFocusMinutes = 0;
+    _startFocusTimer();
+  }
+
+  void _startFocusTimer() {
+    final s = _active;
+    if (s == null) return;
     _state = FocusSessionState.running;
-    final total = Duration(minutes: preset.focusMinutes);
+    final total = Duration(minutes: s.focusMinutes);
     _remaining = total;
     _timer.start(total);
     _persist();
@@ -76,39 +113,75 @@ class FocusSessionProvider with ChangeNotifier {
     } else if (_state == FocusSessionState.paused) {
       _timer.resume();
       _state = FocusSessionState.running;
+    } else {
+      return;
     }
     _remaining = _timer.remaining;
     _persist();
     notifyListeners();
   }
 
-  /// Akhiri (batalkan) sesi tanpa disimpan sebagai selesai.
-  Future<void> endSession() async {
+  /// Mulai istirahat antar-siklus.
+  void startBreak() {
+    final s = _active;
+    if (s == null) return;
+    _state = FocusSessionState.breakTime;
+    final total = Duration(minutes: s.breakMinutes);
+    _remaining = total;
+    _timer.start(total);
+    _persist();
+    notifyListeners();
+  }
+
+  /// Lewati istirahat dan langsung ke sesi fokus berikutnya.
+  void skipBreak() => startNextSession();
+
+  /// Mulai blok fokus berikutnya (menaikkan nomor sesi).
+  void startNextSession() {
+    final s = _active;
+    if (s == null) return;
+    if (_currentSession < s.totalSessions) {
+      _currentSession++;
+    }
+    _startFocusTimer();
+  }
+
+  /// Akhiri (batalkan) sesi. Menit fokus dari blok yang sudah selesai tetap
+  /// dihitung ke tugas.
+  Future<void> endSession({TaskProvider? taskProvider}) async {
+    _addAccumulatedMinutes(taskProvider);
     _timer.pause();
-    _active = null;
-    _state = FocusSessionState.idle;
-    _remaining = Duration.zero;
+    _reset();
     await _repo.clearActive();
     notifyListeners();
   }
 
-  /// Tandai sesi selesai dengan status pencapaian target. Menambahkan menit
-  /// fokus ke tugas terkait (pola existing [TaskProvider.addFocusMinutes]).
+  /// Tandai seluruh sesi selesai dengan status pencapaian target.
   /// [status] disimpan ke riwayat pada Fase 4.
   Future<void> completeSession(
     SessionTargetStatus status, {
     TaskProvider? taskProvider,
   }) async {
-    final session = _active;
-    if (session != null) {
-      taskProvider?.addFocusMinutes(session.taskId, session.focusMinutes);
-    }
+    _addAccumulatedMinutes(taskProvider);
     _timer.pause();
+    _reset();
+    await _repo.clearActive();
+    notifyListeners();
+  }
+
+  void _addAccumulatedMinutes(TaskProvider? taskProvider) {
+    final s = _active;
+    if (s != null && _accumulatedFocusMinutes > 0) {
+      taskProvider?.addFocusMinutes(s.taskId, _accumulatedFocusMinutes);
+    }
+  }
+
+  void _reset() {
     _active = null;
     _state = FocusSessionState.idle;
     _remaining = Duration.zero;
-    await _repo.clearActive();
-    notifyListeners();
+    _currentSession = 1;
+    _accumulatedFocusMinutes = 0;
   }
 
   void _persist() {
@@ -118,6 +191,8 @@ class FocusSessionProvider with ChangeNotifier {
       ActiveSessionSnapshot(
         session: session,
         remainingSeconds: _remaining.inSeconds,
+        currentSession: _currentSession,
+        accumulatedFocusMinutes: _accumulatedFocusMinutes,
       ),
     );
   }

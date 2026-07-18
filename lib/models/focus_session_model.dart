@@ -1,6 +1,6 @@
 // lib/models/focus_session_model.dart
 
-/// Mode sesi fokus. `custom` disiapkan untuk Fase 2 (belum aktif di Fase 1).
+/// Mode sesi fokus.
 enum FocusMode { focus, flexible, custom }
 
 extension FocusModeLabel on FocusMode {
@@ -16,8 +16,8 @@ extension FocusModeLabel on FocusMode {
   }
 }
 
-/// Status siklus hidup sebuah sesi fokus. `preparing` & `breakTime`
-/// dideklarasikan untuk fase berikutnya (belum dipakai di Fase 1).
+/// Status siklus hidup sebuah sesi fokus. `preparing` disiapkan untuk fase
+/// berikutnya (belum dipakai). `breakTime` dipakai mulai Fase 2.
 enum FocusSessionState {
   idle,
   preparing,
@@ -30,6 +30,9 @@ enum FocusSessionState {
 
 /// Lama hitung mundur di halaman persiapan (detik).
 const int kPreparationSeconds = 5;
+
+/// Pilihan durasi fokus (menit) untuk Mode Kustom.
+const List<int> kCustomFocusOptions = [15, 25, 30, 45, 50, 60, 90, 120];
 
 /// Hasil pencapaian target sebuah sesi fokus.
 enum SessionTargetStatus { achieved, partial, notAchieved }
@@ -76,6 +79,9 @@ class FocusSession {
   final String? targetText; // target bebas, mis. "Menyelesaikan Bab II"
   final int focusMinutes;
   final int recommendedSessions; // rekomendasi dari SAW (informasi)
+  final int totalSessions; // jumlah siklus fokus yang dijalankan
+  final int breakMinutes; // durasi istirahat antar-siklus
+  final bool autoAdvance; // lanjut sesi berikutnya otomatis
   final DateTime startedAt;
   final DateTime? endedAt;
   final SessionTargetStatus? targetStatus;
@@ -88,6 +94,9 @@ class FocusSession {
     this.targetText,
     required this.focusMinutes,
     required this.recommendedSessions,
+    this.totalSessions = 1,
+    this.breakMinutes = 0,
+    this.autoAdvance = false,
     required this.startedAt,
     this.endedAt,
     this.targetStatus,
@@ -105,6 +114,9 @@ class FocusSession {
       targetText: targetText,
       focusMinutes: focusMinutes,
       recommendedSessions: recommendedSessions,
+      totalSessions: totalSessions,
+      breakMinutes: breakMinutes,
+      autoAdvance: autoAdvance,
       startedAt: startedAt,
       endedAt: endedAt ?? this.endedAt,
       targetStatus: targetStatus ?? this.targetStatus,
@@ -119,6 +131,9 @@ class FocusSession {
         'targetText': targetText,
         'focusMinutes': focusMinutes,
         'recommendedSessions': recommendedSessions,
+        'totalSessions': totalSessions,
+        'breakMinutes': breakMinutes,
+        'autoAdvance': autoAdvance,
         'startedAt': startedAt.toIso8601String(),
         'endedAt': endedAt?.toIso8601String(),
         'targetStatus': targetStatus?.index,
@@ -147,6 +162,9 @@ class FocusSession {
       targetText: json['targetText'] as String?,
       focusMinutes: json['focusMinutes'] as int,
       recommendedSessions: json['recommendedSessions'] as int? ?? 1,
+      totalSessions: json['totalSessions'] as int? ?? 1,
+      breakMinutes: json['breakMinutes'] as int? ?? 0,
+      autoAdvance: json['autoAdvance'] as bool? ?? false,
       startedAt: DateTime.parse(json['startedAt'] as String),
       endedAt: json['endedAt'] != null
           ? DateTime.parse(json['endedAt'] as String)
@@ -160,21 +178,29 @@ class FocusSession {
 class ActiveSessionSnapshot {
   final FocusSession session;
   final int remainingSeconds;
+  final int currentSession;
+  final int accumulatedFocusMinutes;
 
   const ActiveSessionSnapshot({
     required this.session,
     required this.remainingSeconds,
+    this.currentSession = 1,
+    this.accumulatedFocusMinutes = 0,
   });
 
   Map<String, dynamic> toJson() => {
         'session': session.toJson(),
         'remainingSeconds': remainingSeconds,
+        'currentSession': currentSession,
+        'accumulatedFocusMinutes': accumulatedFocusMinutes,
       };
 
   factory ActiveSessionSnapshot.fromJson(Map<String, dynamic> json) {
     return ActiveSessionSnapshot(
       session: FocusSession.fromJson(json['session'] as Map<String, dynamic>),
       remainingSeconds: json['remainingSeconds'] as int? ?? 0,
+      currentSession: json['currentSession'] as int? ?? 1,
+      accumulatedFocusMinutes: json['accumulatedFocusMinutes'] as int? ?? 0,
     );
   }
 }

@@ -3,12 +3,21 @@
 import 'package:flutter/material.dart';
 import '../../models/focus_session_model.dart';
 import '../../utils/app_theme.dart';
+import 'focus_custom_sheet.dart';
 
-/// Bottom sheet pemilihan mode & preset sebelum memulai sesi fokus.
-/// Mengembalikan pilihan mode + preset, atau null bila dibatalkan.
-Future<({FocusMode mode, FocusPreset preset})?> showFocusModeSheet(
-    BuildContext context) {
-  return showModalBottomSheet<({FocusMode mode, FocusPreset preset})>(
+/// Hasil pemilihan pada [showFocusModeSheet]. Untuk mode non-Kustom, `cycles`
+/// diabaikan (pemanggil memakai rekomendasi SAW) dan `autoAdvance` false.
+typedef FocusModeSelection = ({
+  FocusMode mode,
+  FocusPreset preset,
+  int cycles,
+  bool autoAdvance,
+});
+
+/// Bottom sheet pemilihan mode & preset (atau konfigurasi Kustom) sebelum
+/// memulai sesi fokus. Mengembalikan pilihan, atau null bila dibatalkan.
+Future<FocusModeSelection?> showFocusModeSheet(BuildContext context) {
+  return showModalBottomSheet<FocusModeSelection>(
     context: context,
     backgroundColor: Colors.white,
     isScrollControlled: true,
@@ -29,6 +38,19 @@ class _FocusModeSheet extends StatefulWidget {
 class _FocusModeSheetState extends State<_FocusModeSheet> {
   FocusMode _mode = FocusMode.focus;
   FocusPreset _preset = kFocusPresets.first;
+
+  bool get _isCustom => _mode == FocusMode.custom;
+
+  Future<void> _openCustom() async {
+    final cfg = await showFocusCustomSheet(context);
+    if (cfg == null || !mounted) return;
+    Navigator.pop(context, (
+      mode: FocusMode.custom,
+      preset: cfg.preset,
+      cycles: cfg.cycles,
+      autoAdvance: cfg.autoAdvance,
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -61,23 +83,43 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
                   child: _modeCard(FocusMode.flexible, Icons.tune_rounded,
                       'Bebas berpindah'),
                 ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _modeCard(FocusMode.custom, Icons.build_rounded,
+                      'Atur sendiri'),
+                ),
               ],
             ),
-            const SizedBox(height: 10),
-            _customModeDisabled(),
             const SizedBox(height: 20),
-            const Text('Preset', style: _sectionLabel),
-            const SizedBox(height: 8),
-            ...kFocusPresets.map(_presetTile),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () =>
-                    Navigator.pop(context, (mode: _mode, preset: _preset)),
-                child: const Text('Lanjut'),
+            if (_isCustom) ...[
+              const Text('Atur durasi, istirahat, dan jumlah siklus sendiri.',
+                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _openCustom,
+                  child: const Text('Atur Kustom'),
+                ),
               ),
-            ),
+            ] else ...[
+              const Text('Preset', style: _sectionLabel),
+              const SizedBox(height: 8),
+              ...kFocusPresets.map(_presetTile),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, (
+                    mode: _mode,
+                    preset: _preset,
+                    cycles: 0,
+                    autoAdvance: false,
+                  )),
+                  child: const Text('Lanjut'),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -90,16 +132,14 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
       onTap: () => setState(() => _mode = mode),
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: selected
               ? AppTheme.primary.withValues(alpha: 0.08)
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-              color: selected
-                  ? AppTheme.primary
-                  : AppTheme.border,
+              color: selected ? AppTheme.primary : AppTheme.border,
               width: selected ? 1.5 : 1),
         ),
         child: Column(
@@ -107,58 +147,17 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
           children: [
             Icon(icon,
                 color: selected ? AppTheme.primary : AppTheme.textSecondary,
-                size: 24),
+                size: 22),
             const SizedBox(height: 8),
             Text(mode.label,
                 style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: selected ? AppTheme.primary : AppTheme.textPrimary)),
             const SizedBox(height: 2),
             Text(subtitle,
                 style: const TextStyle(
-                    fontSize: 11, color: AppTheme.textSecondary)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _customModeDisabled() {
-    return Opacity(
-      opacity: 0.55,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.border),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.build_circle_outlined,
-                color: AppTheme.textSecondary, size: 22),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text('Kustom',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary)),
-            ),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.textSecondary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('Segera hadir',
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary)),
-            ),
+                    fontSize: 10, color: AppTheme.textSecondary)),
           ],
         ),
       ),
