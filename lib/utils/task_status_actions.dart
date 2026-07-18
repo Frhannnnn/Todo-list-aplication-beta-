@@ -3,14 +3,16 @@
 import 'package:flutter/material.dart';
 import '../models/task_model.dart';
 import '../services/task_provider.dart';
-import '../screens/pomodoro_timer_screen.dart';
+import '../screens/focus/focus_mode_sheet.dart';
+import '../screens/focus/focus_intent_dialog.dart';
+import '../screens/focus/focus_preparation_screen.dart';
+import 'app_theme.dart';
+import 'focus_recommendation.dart';
 
 /// Terapkan perubahan status tugas dari kartu tugas (tombol "Mulai" /
-/// "Selesaikan" / "Buka Lagi"). Dipakai bersama oleh task_list_screen.dart
-/// dan calendar_screen.dart supaya perilaku "Mulai" konsisten di kedua
-/// tempat (Issue #5): begitu tugas ditandai "Sedang Dikerjakan", buka Timer
-/// Pomodoro untuk tugas itu. Transisi status lain tetap langsung diterapkan
-/// tanpa navigasi tambahan.
+/// "Selesaikan" / "Buka Lagi"). Saat tugas ditandai "Sedang Dikerjakan",
+/// jalankan alur Focus Session: pilih mode & preset → tentukan target →
+/// halaman persiapan → timer. Transisi status lain diterapkan langsung.
 void handleStatusChange(
   BuildContext context,
   TaskProvider provider,
@@ -20,9 +22,34 @@ void handleStatusChange(
   provider.updateStatus(task.id, newStatus);
 
   if (newStatus == TaskStatus.sedangDikerjakan) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => PomodoroTimerScreen(task: task)),
-    );
+    _startFocusFlow(context, provider, task);
   }
+}
+
+Future<void> _startFocusFlow(
+  BuildContext context,
+  TaskProvider provider,
+  Task task,
+) async {
+  final selection = await showFocusModeSheet(context);
+  if (selection == null || !context.mounted) return;
+
+  final target = await showFocusIntentDialog(context);
+  if (target == null || !context.mounted) return; // dibatalkan
+
+  final totalActive = provider.activeTasks.length;
+  final priorityLabel = AppTheme.getPrioritasLabel(task.ranking, totalActive);
+  final recommendedSessions = focusRecommendation(priorityLabel).sessions;
+
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => FocusPreparationScreen(
+        task: task,
+        mode: selection.mode,
+        preset: selection.preset,
+        targetText: target.trim().isEmpty ? null : target.trim(),
+        recommendedSessions: recommendedSessions,
+      ),
+    ),
+  );
 }
