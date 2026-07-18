@@ -813,6 +813,10 @@ class TaskProvider with ChangeNotifier {
       recurrenceCount: recurrenceCount,
       clearRecurrenceCount: clearRecurrenceCount,
     );
+    // Tangkap tugas yang baru diselesaikan berdasarkan IDENTITAS sebelum
+    // _recalculateSAW() mengurutkan ulang _tasks (tugas selesai dipindah ke
+    // akhir), sehingga _tasks[index] tak lagi menunjuk ke tugas ini.
+    final base = _tasks[index];
     _recalculateSAW();
 
     // Spawn occurrence berikutnya bila tugas berulang baru saja diselesaikan.
@@ -820,13 +824,13 @@ class TaskProvider with ChangeNotifier {
     Task? spawned;
     if (status == TaskStatus.selesai &&
         oldStatus != TaskStatus.selesai &&
-        _tasks[index].recurrence != RecurrenceType.none) {
-      final base = _tasks[index];
+        base.recurrence != RecurrenceType.none) {
       final nextDate = nextOccurrenceDate(base);
       if (nextDate != null) {
         final seriesId = base.seriesId ?? base.id;
         if (base.seriesId == null) {
-          _tasks[index] = base.copyWith(seriesId: seriesId);
+          final ci = _tasks.indexWhere((t) => t.id == base.id);
+          if (ci != -1) _tasks[ci] = _tasks[ci].copyWith(seriesId: seriesId);
         }
         spawned = Task(
           id: _uuid.v4(),
@@ -862,7 +866,7 @@ class TaskProvider with ChangeNotifier {
     await _runScheduler();
     final saved = await _saveTasks();
     if (_notifEnabled) {
-      await _notifService.scheduleTaskNotifications(_tasks[index]);
+      await _notifService.scheduleTaskNotifications(base);
       if (spawned != null) {
         await _notifService.scheduleTaskNotifications(spawned);
         if (_dailyReminderEnabled) {
