@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import '../services/task_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/recurrence.dart';
 import '../widgets/task_card_widget.dart';
 import 'add_edit_task_screen.dart';
 
@@ -343,6 +344,20 @@ class DashboardScreen extends StatelessWidget {
         DateTime(now.year, now.month, 1).weekday - DateTime.monday;
     final totalCells = leadingBlanks + daysInMonth;
 
+    final monthEnd = DateTime(now.year, now.month, daysInMonth, 23, 59);
+    final previewDays = <int>{};
+    for (final t in provider.tasks) {
+      if (t.recurrence == RecurrenceType.none ||
+          t.status == TaskStatus.selesai) {
+        continue;
+      }
+      for (final d in upcomingOccurrences(t, until: monthEnd)) {
+        if (d.year == now.year && d.month == now.month) {
+          previewDays.add(d.day);
+        }
+      }
+    }
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -452,6 +467,18 @@ class DashboardScreen extends StatelessWidget {
                               : hasOverdue
                                   ? AppTheme.danger
                                   : AppTheme.primary,
+                        ),
+                      ),
+                    ],
+                    if (!hasTask && !isToday && previewDays.contains(day)) ...[
+                      const SizedBox(height: 2),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: AppTheme.primary, width: 1.2),
                         ),
                       ),
                     ],
