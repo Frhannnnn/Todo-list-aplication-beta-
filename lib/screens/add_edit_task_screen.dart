@@ -9,6 +9,7 @@ import '../utils/app_theme.dart';
 import '../main.dart';
 import '../widgets/rename_dialog.dart';
 import 'ai_task_creator_screen.dart';
+import '../utils/recurrence.dart';
 
 class AddEditTaskScreen extends StatefulWidget {
   final Task? task;
@@ -37,6 +38,11 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   TaskStatus _status = TaskStatus.belumDikerjakan;
   bool _notifEnabled = true;
   List<String> _notifSchedule = ['h-1', '3jam', 'deadline'];
+  RecurrenceType _recurrence = RecurrenceType.none;
+  int _recurrenceInterval = 1;
+  RecurrenceUnit _recurrenceUnit = RecurrenceUnit.day;
+  DateTime? _recurrenceEndDate;
+  int? _recurrenceCount;
 
   bool get isEdit => widget.task != null;
   bool get _isAkademik => _lingkupTugas == _kAkademikScope;
@@ -57,6 +63,11 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       _status = t.status;
       _notifEnabled = t.notifEnabled;
       _notifSchedule = List.from(t.notifSchedule);
+      _recurrence = t.recurrence;
+      _recurrenceInterval = t.recurrenceInterval;
+      _recurrenceUnit = t.recurrenceUnit ?? RecurrenceUnit.day;
+      _recurrenceEndDate = t.recurrenceEndDate;
+      _recurrenceCount = t.recurrenceCount;
     } else {
       // Set default lingkupTugas from provider after build
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -137,6 +148,10 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                   _buildDeadlinePicker(),
                   const SizedBox(height: 10),
                   _buildUrgensiIndicator(),
+                ]),
+                const SizedBox(height: 16),
+                _buildSection('Pengulangan', [
+                  _buildRecurrencePicker(),
                 ]),
                 const SizedBox(height: 16),
                 _buildSection('Kategori', [
@@ -919,6 +934,297 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
+  Widget _buildRecurrencePicker() {
+    return InkWell(
+      onTap: _showRecurrenceSheet,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          border: Border.all(color: AppTheme.border),
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.grey.shade50,
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.repeat_rounded, color: AppTheme.primary),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Pengulangan',
+                      style: TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary)),
+                  Text(
+                    recurrenceLabel(_recurrence, _deadline,
+                        interval: _recurrenceInterval, unit: _recurrenceUnit),
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRecurrenceSheet() {
+    const options = [
+      RecurrenceType.none,
+      RecurrenceType.daily,
+      RecurrenceType.weekly,
+      RecurrenceType.monthly,
+      RecurrenceType.yearly,
+      RecurrenceType.weekday,
+      RecurrenceType.custom,
+    ];
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Text('Pengulangan',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary)),
+            ),
+            ...options.map((opt) {
+              final selected = _recurrence == opt;
+              final label = opt == RecurrenceType.custom
+                  ? 'Custom…'
+                  : recurrenceLabel(opt, _deadline);
+              return ListTile(
+                title: Text(label,
+                    style: TextStyle(
+                        color: selected
+                            ? AppTheme.primary
+                            : AppTheme.textPrimary,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500)),
+                trailing: selected
+                    ? const Icon(Icons.check_rounded, color: AppTheme.primary)
+                    : null,
+                onTap: () {
+                  Navigator.pop(ctx);
+                  if (opt == RecurrenceType.custom) {
+                    _showCustomRecurrenceSheet();
+                  } else {
+                    setState(() => _recurrence = opt);
+                  }
+                },
+              );
+            }),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCustomRecurrenceSheet() {
+    var interval = _recurrenceInterval < 1 ? 1 : _recurrenceInterval;
+    var unit = _recurrenceUnit;
+    // endMode: 0 = tidak pernah, 1 = pada tanggal, 2 = setelah N kali
+    var endMode = _recurrenceEndDate != null
+        ? 1
+        : (_recurrenceCount != null ? 2 : 0);
+    var endDate = _recurrenceEndDate;
+    var count = _recurrenceCount ?? 10;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: 16 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Pengulangan Custom',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textPrimary)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text('Ulangi setiap',
+                      style: TextStyle(color: AppTheme.textPrimary)),
+                  const SizedBox(width: 12),
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline),
+                    color: AppTheme.primary,
+                    onPressed: () => setSheet(() {
+                      if (interval > 1) interval--;
+                    }),
+                  ),
+                  Text('$interval',
+                      style: const TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.w700)),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle_outline),
+                    color: AppTheme.primary,
+                    onPressed: () => setSheet(() => interval++),
+                  ),
+                  const SizedBox(width: 8),
+                  DropdownButton<RecurrenceUnit>(
+                    value: unit,
+                    items: const [
+                      DropdownMenuItem(
+                          value: RecurrenceUnit.day, child: Text('hari')),
+                      DropdownMenuItem(
+                          value: RecurrenceUnit.week, child: Text('minggu')),
+                      DropdownMenuItem(
+                          value: RecurrenceUnit.month, child: Text('bulan')),
+                      DropdownMenuItem(
+                          value: RecurrenceUnit.year, child: Text('tahun')),
+                    ],
+                    onChanged: (v) =>
+                        setSheet(() => unit = v ?? RecurrenceUnit.day),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text('Berakhir',
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textPrimary)),
+              const SizedBox(height: 4),
+              _customEndRow(
+                selected: endMode == 0,
+                onTap: () => setSheet(() => endMode = 0),
+                child: const Text('Tidak pernah'),
+              ),
+              _customEndRow(
+                selected: endMode == 1,
+                onTap: () => setSheet(() => endMode = 1),
+                child: Row(
+                  children: [
+                    const Text('Pada tanggal'),
+                    const SizedBox(width: 8),
+                    if (endMode == 1)
+                      TextButton(
+                        onPressed: () async {
+                          final picked = await showDatePicker(
+                            context: ctx,
+                            initialDate: endDate ??
+                                _deadline.add(const Duration(days: 30)),
+                            firstDate: _deadline,
+                            lastDate:
+                                _deadline.add(const Duration(days: 365 * 5)),
+                          );
+                          if (picked != null) setSheet(() => endDate = picked);
+                        },
+                        child: Text(endDate == null
+                            ? 'Pilih…'
+                            : DateFormat('d MMM yyyy', 'id_ID')
+                                .format(endDate!)),
+                      ),
+                  ],
+                ),
+              ),
+              _customEndRow(
+                selected: endMode == 2,
+                onTap: () => setSheet(() => endMode = 2),
+                child: Row(
+                  children: [
+                    const Text('Setelah'),
+                    const SizedBox(width: 8),
+                    if (endMode == 2) ...[
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, size: 20),
+                        color: AppTheme.primary,
+                        onPressed: () =>
+                            setSheet(() => count = count > 1 ? count - 1 : 1),
+                      ),
+                      Text('$count'),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, size: 20),
+                        color: AppTheme.primary,
+                        onPressed: () => setSheet(() => count++),
+                      ),
+                      const Text('kali'),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _recurrence = RecurrenceType.custom;
+                      _recurrenceInterval = interval;
+                      _recurrenceUnit = unit;
+                      _recurrenceEndDate = endMode == 1 ? endDate : null;
+                      _recurrenceCount = endMode == 2 ? count : null;
+                    });
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _customEndRow({
+    required bool selected,
+    required VoidCallback onTap,
+    required Widget child,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Icon(
+              selected
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: selected ? AppTheme.primary : AppTheme.textSecondary,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -954,6 +1260,15 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         catatan: _catatanCtrl.text.trim(),
         notifEnabled: _notifEnabled,
         notifSchedule: _notifSchedule,
+        recurrence: _recurrence,
+        recurrenceInterval: _recurrenceInterval,
+        recurrenceUnit:
+            _recurrence == RecurrenceType.custom ? _recurrenceUnit : null,
+        clearRecurrenceUnit: _recurrence != RecurrenceType.custom,
+        recurrenceEndDate: _recurrenceEndDate,
+        clearRecurrenceEndDate: _recurrenceEndDate == null,
+        recurrenceCount: _recurrenceCount,
+        clearRecurrenceCount: _recurrenceCount == null,
       );
     } else {
       saved = await provider.tambahTugas(
@@ -967,6 +1282,12 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         catatan: _catatanCtrl.text.trim(),
         notifEnabled: _notifEnabled,
         notifSchedule: _notifSchedule,
+        recurrence: _recurrence,
+        recurrenceInterval: _recurrenceInterval,
+        recurrenceUnit:
+            _recurrence == RecurrenceType.custom ? _recurrenceUnit : null,
+        recurrenceEndDate: _recurrenceEndDate,
+        recurrenceCount: _recurrenceCount,
       );
     }
 
