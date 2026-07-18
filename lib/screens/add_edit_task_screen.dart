@@ -1003,7 +1003,13 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary)),
             ),
-            ...options.map((opt) {
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...options.map((opt) {
               final selected = _recurrence == opt;
               final label = opt == RecurrenceType.custom
                   ? 'Custom…'
@@ -1029,7 +1035,11 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 },
               );
             }),
-            const SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
