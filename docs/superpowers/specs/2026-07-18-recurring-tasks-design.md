@@ -88,9 +88,10 @@ endDate/count), yang DITOLAK karena:
 - Edit rule berarti harus regenerate tumpukan tugas masa depan.
 
 Lazy menjaga himpunan aktif minimal, urgensi bermakna, notifikasi terbatas, dan
-edit rule sepele. Trade-off: occurrence masa depan tidak terlihat jauh di
-kalender — hanya yang aktif sekarang. (Preview tanggal berikutnya bisa ditambah
-nanti tanpa materialize; di luar lingkup v1.)
+edit rule sepele. Trade-off: occurrence masa depan tidak materialize jadi tugas
+nyata. Untuk tetap memberi visibilitas perencanaan, occurrence mendatang
+ditampilkan sebagai **preview read-only** di kalender (lihat bagian "Preview
+occurrence di kalender") — tanpa mengotori daftar aktif/SAW/notifikasi.
 
 ### Titik implementasi
 
@@ -170,6 +171,32 @@ Di `task_card_widget.dart`, bila `task.recurrence != none`, tampilkan badge keci
 `Icons.repeat_rounded` bergaya pill rounded (`AppTheme.primary` alpha 0.1 + border
 alpha 0.3), senada dengan chip kategori/status yang ada.
 
+## Preview occurrence di kalender (read-only)
+
+Occurrence mendatang TIDAK dimaterialize, tapi ditampilkan sebagai titik preview
+di layar Kalender (`calendar_screen.dart`) dan mini-kalender Dashboard
+(`dashboard_screen.dart`), supaya user tetap melihat pola ke depan tanpa mengotori
+daftar aktif / SAW / notifikasi.
+
+**Perhitungan (on-the-fly, tanpa disimpan)** — helper baru di `recurrence.dart`:
+`List<DateTime> upcomingOccurrences(Task task, {required DateTime until, int maxCount = 60})`
+yang, untuk sebuah occurrence terbuka (`recurrence != none && status != selesai`),
+menghasilkan tanggal occurrence berikutnya secara berturut (memakai
+`nextOccurrenceDate` sambil menaikkan index bayangan), berhenti pada
+`until`/`maxCount`/`endDate`/`count`. Untuk bulan yang tampil, kumpulkan tanggal
+preview dari SEMUA seri aktif.
+
+**Gaya titik (senada):**
+- Titik preview = **cincin berongga** (`Border.all(color: AppTheme.primary, width: 1.2)`,
+  center transparan), diameter ~6px, TANPA latar sel — terbaca "tentatif/direncanakan".
+- **Precedence**: bila suatu hari sudah punya tugas nyata, tampilkan titik solid
+  yang sudah ada (tugas nyata menang); cincin preview hanya muncul di hari yang
+  belum ada tugas nyata.
+- Styling `today`/`selected` yang sudah ada tidak diubah.
+
+Batas aman: `maxCount` mencegah loop tak berujung untuk seri tak terbatas; preview
+hanya dihitung untuk rentang bulan yang sedang ditampilkan.
+
 ## Keputusan lain (v1)
 
 - **Edit**: hanya mengubah instance saat ini; rule terbawa ke occurrence
@@ -192,8 +219,10 @@ pre-existing) — perubahan tidak boleh menambah kegagalan.
 ## Berkas yang tersentuh
 
 - `lib/models/task_model.dart` — enum + field + json/copyWith
-- `lib/utils/recurrence.dart` (baru) — mesin hitung + label
+- `lib/utils/recurrence.dart` (baru) — mesin hitung + label + `upcomingOccurrences`
 - `lib/services/task_provider.dart` — `_addTaskObject`, spawn di `editTugas`,
   parameter recurrence di `tambahTugas`/`editTugas`
 - `lib/screens/add_edit_task_screen.dart` — section "Pengulangan" + bottom sheet custom
 - `lib/widgets/task_card_widget.dart` — badge berulang
+- `lib/screens/calendar_screen.dart` — titik preview cincin berongga
+- `lib/screens/dashboard_screen.dart` — titik preview di mini-kalender
