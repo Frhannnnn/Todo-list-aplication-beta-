@@ -11,6 +11,7 @@ import '../models/schedule_result_model.dart';
 import 'saw_service.dart';
 import 'notification_service.dart';
 import 'smart_scheduler_service.dart';
+import '../utils/recurrence.dart';
 
 class TaskProvider with ChangeNotifier {
   List<Task> _tasks = [];
@@ -86,6 +87,34 @@ class TaskProvider with ChangeNotifier {
   double get persentaseSelesai {
     if (_tasks.isEmpty) return 0;
     return (tugasSelesai / totalTugas) * 100;
+  }
+
+  /// Streak = jumlah hari berturut-turut (berakhir hari ini atau kemarin) di
+  /// mana minimal satu tugas ditandai selesai. Hanya menghitung tugas yang
+  /// punya [Task.completedAt] — tugas yang sudah selesai sebelum fitur ini ada
+  /// (tanpa timestamp) tidak ikut dihitung, jadi streak tumbuh dari sekarang.
+  int get currentStreak {
+    final completedDays = _tasks
+        .where((t) => t.completedAt != null)
+        .map((t) => DateTime(
+            t.completedAt!.year, t.completedAt!.month, t.completedAt!.day))
+        .toSet();
+    if (completedDays.isEmpty) return 0;
+
+    final now = DateTime.now();
+    var cursor = DateTime(now.year, now.month, now.day);
+    // Streak masih "hidup" bila selesai hari ini ATAU kemarin.
+    if (!completedDays.contains(cursor)) {
+      cursor = cursor.subtract(const Duration(days: 1));
+      if (!completedDays.contains(cursor)) return 0;
+    }
+
+    var streak = 0;
+    while (completedDays.contains(cursor)) {
+      streak++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    return streak;
   }
 
   // Smart Scheduling getters
@@ -647,6 +676,11 @@ class TaskProvider with ChangeNotifier {
     String? catatan,
     bool notifEnabled = true,
     List<String>? notifSchedule,
+    RecurrenceType recurrence = RecurrenceType.none,
+    int recurrenceInterval = 1,
+    RecurrenceUnit? recurrenceUnit,
+    DateTime? recurrenceEndDate,
+    int? recurrenceCount,
   }) async {
     final task = Task(
       id: _uuid.v4(),
@@ -662,6 +696,11 @@ class TaskProvider with ChangeNotifier {
       createdAt: DateTime.now(),
       notifEnabled: notifEnabled,
       notifSchedule: notifSchedule,
+      recurrence: recurrence,
+      recurrenceInterval: recurrenceInterval,
+      recurrenceUnit: recurrenceUnit,
+      recurrenceEndDate: recurrenceEndDate,
+      recurrenceCount: recurrenceCount,
     );
     _tasks.add(task);
     _recalculateSAW();
@@ -724,9 +763,31 @@ class TaskProvider with ChangeNotifier {
     String? catatan,
     bool? notifEnabled,
     List<String>? notifSchedule,
+    RecurrenceType? recurrence,
+    int? recurrenceInterval,
+    RecurrenceUnit? recurrenceUnit,
+    bool clearRecurrenceUnit = false,
+    DateTime? recurrenceEndDate,
+    bool clearRecurrenceEndDate = false,
+    int? recurrenceCount,
+    bool clearRecurrenceCount = false,
   }) async {
     final index = _tasks.indexWhere((t) => t.id == id);
     if (index == -1) return false;
+
+    // Catat/hapus waktu penyelesaian saat status berpindah ke/dari 'selesai'
+    // (dipakai untuk menghitung streak di Dashboard). Hanya berubah saat
+    // status benar-benar transisi, bukan tiap edit.
+    final oldStatus = _tasks[index].status;
+    DateTime? completedAt;
+    var clearCompletedAt = false;
+    if (status != null && status != oldStatus) {
+      if (status == TaskStatus.selesai) {
+        completedAt = DateTime.now();
+      } else if (oldStatus == TaskStatus.selesai) {
+        clearCompletedAt = true;
+      }
+    }
 
     _tasks[index] = _tasks[index].copyWith(
       namaTugas: namaTugas,
@@ -739,10 +800,63 @@ class TaskProvider with ChangeNotifier {
       status: status,
       category: category,
       catatan: catatan,
+      completedAt: completedAt,
+      clearCompletedAt: clearCompletedAt,
       notifEnabled: notifEnabled,
       notifSchedule: notifSchedule,
+      recurrence: recurrence,
+      recurrenceInterval: recurrenceInterval,
+      recurrenceUnit: recurrenceUnit,
+      clearRecurrenceUnit: clearRecurrenceUnit,
+      recurrenceEndDate: recurrenceEndDate,
+      clearRecurrenceEndDate: clearRecurrenceEndDate,
+      recurrenceCount: recurrenceCount,
+      clearRecurrenceCount: clearRecurrenceCount,
     );
+    // Tangkap tugas yang baru diselesaikan berdasarkan IDENTITAS sebelum
+    // _recalculateSAW() mengurutkan ulang _tasks (tugas selesai dipindah ke
+    // akhir), sehingga _tasks[index] tak lagi menunjuk ke tugas ini.
+    final base = _tasks[index];
     _recalculateSAW();
+
+    // Spawn occurrence berikutnya bila tugas berulang baru saja diselesaikan.
+    // (Model lazy: hanya saat transisi ke selesai, satu occurrence terbuka.)
+    Task? spawned;
+    if (status == TaskStatus.selesai &&
+        oldStatus != TaskStatus.selesai &&
+        base.recurrence != RecurrenceType.none) {
+      final nextDate = nextOccurrenceDate(base);
+      if (nextDate != null) {
+        final seriesId = base.seriesId ?? base.id;
+        if (base.seriesId == null) {
+          final ci = _tasks.indexWhere((t) => t.id == base.id);
+          if (ci != -1) _tasks[ci] = _tasks[ci].copyWith(seriesId: seriesId);
+        }
+        spawned = Task(
+          id: _uuid.v4(),
+          namaTugas: base.namaTugas,
+          lingkupTugas: base.lingkupTugas,
+          mataKuliah: base.mataKuliah,
+          deadline: nextDate,
+          tingkatKepentingan: base.tingkatKepentingan,
+          estimasiWaktu: base.estimasiWaktu,
+          category: base.category,
+          catatan: base.catatan,
+          createdAt: DateTime.now(),
+          notifEnabled: base.notifEnabled,
+          notifSchedule: List.from(base.notifSchedule),
+          recurrence: base.recurrence,
+          recurrenceInterval: base.recurrenceInterval,
+          recurrenceUnit: base.recurrenceUnit,
+          recurrenceEndDate: base.recurrenceEndDate,
+          recurrenceCount: base.recurrenceCount,
+          recurrenceIndex: base.recurrenceIndex + 1,
+          seriesId: seriesId,
+        );
+        _tasks.add(spawned);
+        _recalculateSAW(); // ranking occurrence baru ikut terhitung
+      }
+    }
 
     if (status == TaskStatus.selesai) {
       _timeBlocks.removeWhere((block) => block.taskId == id);
@@ -752,7 +866,17 @@ class TaskProvider with ChangeNotifier {
     await _runScheduler();
     final saved = await _saveTasks();
     if (_notifEnabled) {
-      await _notifService.scheduleTaskNotifications(_tasks[index]);
+      await _notifService.scheduleTaskNotifications(base);
+      if (spawned != null) {
+        await _notifService.scheduleTaskNotifications(spawned);
+        if (_dailyReminderEnabled) {
+          await _notifService.scheduleDailyReminder(
+            hour: _dailyReminderHour,
+            minute: _dailyReminderMinute,
+            activeTasks: tugasAktif,
+          );
+        }
+      }
     }
     notifyListeners();
     return saved;

@@ -201,26 +201,35 @@ class _PomodoroTimerScreenState extends State<PomodoroTimerScreen> {
           elevation: 0,
         ),
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildPhaseBadge(),
-                const SizedBox(height: 32),
-                _buildCountdown(),
-                const SizedBox(height: 24),
-                _buildSessionDots(),
-                const SizedBox(height: 48),
-                _buildControls(),
-                const SizedBox(height: 16),
-                Text(
-                  'Sesi fokus selesai: $_completedFocusSessions',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppTheme.textSecondary),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildPhaseBadge(),
+                        const SizedBox(height: 32),
+                        _buildCountdown(),
+                        const SizedBox(height: 24),
+                        _buildSessionDots(),
+                        const SizedBox(height: 48),
+                        _buildControls(),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Sesi fokus selesai: $_completedFocusSessions',
+                          style: const TextStyle(
+                              fontSize: 12, color: AppTheme.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            ),
+              );
+            },
           ),
         ),
       ),

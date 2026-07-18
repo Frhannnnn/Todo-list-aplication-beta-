@@ -1,10 +1,12 @@
 // lib/screens/dashboard_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import '../services/task_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/recurrence.dart';
 import '../widgets/task_card_widget.dart';
 import 'add_edit_task_screen.dart';
 
@@ -59,16 +61,7 @@ class DashboardScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.border),
-            ),
-            child: const Icon(Icons.more_horiz, color: AppTheme.textSecondary, size: 20),
-          ),
+          const SizedBox(width: 40, height: 40),
           const Text(
             'Tugas',
             style: TextStyle(
@@ -179,9 +172,11 @@ class DashboardScreen extends StatelessWidget {
     final selesai = provider.tugasSelesai;
     final pct = total > 0 ? (selesai / total * 100).round() : 0;
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
       children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
         // Circular progress
         Expanded(
           flex: 4,
@@ -197,123 +192,303 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                width: 120,
-                height: 120,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    SizedBox(
-                      width: 120,
-                      height: 120,
-                      child: CircularProgressIndicator(
-                        value: total > 0 ? selesai / total : 0,
-                        strokeWidth: 10,
-                        backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
-                        valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
-                        strokeCap: StrokeCap.round,
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final size =
+                      constraints.maxWidth < 120 ? constraints.maxWidth : 120.0;
+                  return SizedBox(
+                    width: size,
+                    height: size,
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        const Icon(Icons.assignment_turned_in_outlined,
-                            color: AppTheme.primary, size: 22),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$pct%',
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.textPrimary,
+                        SizedBox(
+                          width: size,
+                          height: size,
+                          child: CircularProgressIndicator(
+                            value: total > 0 ? selesai / total : 0,
+                            strokeWidth: 10,
+                            backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
+                            valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
+                            strokeCap: StrokeCap.round,
                           ),
                         ),
-                        const Text(
-                          'Selesai',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.textSecondary,
-                          ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.assignment_turned_in_outlined,
+                                color: AppTheme.primary, size: 22),
+                            const SizedBox(height: 4),
+                            Text(
+                              '$pct%',
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            const Text(
+                              'Selesai',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppTheme.textSecondary,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),
         ),
         const SizedBox(width: 16),
-        // Activity grid (heatmap)
+        // Streak motivasi
         Expanded(
           flex: 5,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Kalender Tugas',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  Icon(Icons.calendar_today_outlined,
-                      size: 16, color: AppTheme.textSecondary),
-                ],
-              ),
-              const SizedBox(height: 10),
-              _buildActivityGrid(provider),
-            ],
-          ),
+          child: _buildStreakCard(provider),
         ),
+          ],
+        ),
+        const SizedBox(height: 20),
+        _buildTaskCalendar(provider),
       ],
     );
   }
 
-  Widget _buildActivityGrid(TaskProvider provider) {
-    final now = DateTime.now();
-    final days = List.generate(35, (i) {
-      return now.subtract(Duration(days: 34 - i));
-    });
-
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: 35,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7,
-        mainAxisSpacing: 3,
-        crossAxisSpacing: 3,
+  Widget _buildStreakCard(TaskProvider provider) {
+    final streak = provider.currentStreak;
+    final selesai = provider.tugasSelesai;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.warning.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.25)),
       ),
-      itemBuilder: (context, index) {
-        final date = days[index];
-        final tasksOnDay = provider.tasks.where((t) =>
-            t.deadline.year == date.year &&
-            t.deadline.month == date.month &&
-            t.deadline.day == date.day).length;
-
-        Color cellColor;
-        if (tasksOnDay == 0) {
-          cellColor = AppTheme.primary.withValues(alpha: 0.06);
-        } else if (tasksOnDay == 1) {
-          cellColor = AppTheme.primary.withValues(alpha: 0.2);
-        } else if (tasksOnDay == 2) {
-          cellColor = AppTheme.primary.withValues(alpha: 0.4);
-        } else {
-          cellColor = AppTheme.primary.withValues(alpha: 0.7);
-        }
-
-        return Container(
-          decoration: BoxDecoration(
-            color: cellColor,
-            borderRadius: BorderRadius.circular(4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.local_fire_department_rounded,
+                  color: AppTheme.warning, size: 22),
+              SizedBox(width: 6),
+              Text(
+                'Streak',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ],
           ),
-        );
-      },
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '$streak',
+                style: const TextStyle(
+                  fontSize: 34,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.warning,
+                ),
+              ),
+              const SizedBox(width: 4),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 5),
+                child: Text(
+                  'hari',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            streak == 0
+                ? 'Selesaikan 1 tugas hari ini untuk memulai!'
+                : 'Beruntun! Pertahankan ya 🔥',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppTheme.textSecondary,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Total selesai: $selesai',
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskCalendar(TaskProvider provider) {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final leadingBlanks =
+        DateTime(now.year, now.month, 1).weekday - DateTime.monday;
+    final totalCells = leadingBlanks + daysInMonth;
+
+    final monthEnd = DateTime(now.year, now.month, daysInMonth, 23, 59);
+    final previewDays = <int>{};
+    for (final t in provider.tasks) {
+      if (t.recurrence == RecurrenceType.none ||
+          t.status == TaskStatus.selesai) {
+        continue;
+      }
+      for (final d in upcomingOccurrences(t, until: monthEnd)) {
+        if (d.year == now.year && d.month == now.month) {
+          previewDays.add(d.day);
+        }
+      }
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Kalender Tugas',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Text(
+                DateFormat('MMMM yyyy', 'id_ID').format(now),
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
+                .map(
+                  (d) => Expanded(
+                    child: Center(
+                      child: Text(
+                        d,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 8),
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: totalCells,
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 7,
+              mainAxisSpacing: 4,
+              crossAxisSpacing: 4,
+            ),
+            itemBuilder: (context, index) {
+              if (index < leadingBlanks) return const SizedBox.shrink();
+              final day = index - leadingBlanks + 1;
+              final date = DateTime(now.year, now.month, day);
+              final isToday = day == now.day;
+              final dayTasks = provider.tasks
+                  .where((t) =>
+                      t.deadline.year == date.year &&
+                      t.deadline.month == date.month &&
+                      t.deadline.day == date.day)
+                  .toList();
+              final hasTask = dayTasks.isNotEmpty;
+              final hasOverdue = dayTasks.any((t) => t.isOverdue);
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: isToday
+                      ? AppTheme.primary
+                      : hasTask
+                          ? AppTheme.primary.withValues(alpha: 0.08)
+                          : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '$day',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: isToday || hasTask
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: isToday ? Colors.white : AppTheme.textPrimary,
+                      ),
+                    ),
+                    if (hasTask) ...[
+                      const SizedBox(height: 2),
+                      Container(
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isToday
+                              ? Colors.white
+                              : hasOverdue
+                                  ? AppTheme.danger
+                                  : AppTheme.primary,
+                        ),
+                      ),
+                    ],
+                    if (!hasTask && !isToday && previewDays.contains(day)) ...[
+                      const SizedBox(height: 2),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: AppTheme.primary, width: 1.2),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 

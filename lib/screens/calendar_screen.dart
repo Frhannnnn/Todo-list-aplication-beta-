@@ -8,6 +8,7 @@ import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
 import '../widgets/task_card_widget.dart';
 import '../utils/task_status_actions.dart';
+import '../utils/recurrence.dart';
 import 'add_edit_task_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -92,6 +93,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  void _goToToday() {
+    final now = DateTime.now();
+    setState(() {
+      _visibleMonth = DateTime(now.year, now.month);
+      _selectedDate = DateTime(now.year, now.month, now.day);
+    });
+  }
+
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
@@ -106,16 +115,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
               color: AppTheme.textPrimary,
             ),
           ),
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.border),
+          GestureDetector(
+            onTap: _goToToday,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.border),
+              ),
+              child: const Icon(Icons.today_rounded,
+                  color: AppTheme.textSecondary, size: 20),
             ),
-            child: const Icon(Icons.today_rounded,
-                color: AppTheme.textSecondary, size: 20),
           ),
         ],
       ),
@@ -176,6 +188,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildCalendar(List<Task> tasks) {
     final days = _calendarDays(_visibleMonth);
+
+    final gridStart = DateTime(days.first.year, days.first.month, days.first.day);
+    final gridEnd =
+        DateTime(days.last.year, days.last.month, days.last.day, 23, 59);
+    final previewDays = <DateTime>{};
+    for (final t in tasks) {
+      if (t.recurrence == RecurrenceType.none ||
+          t.status == TaskStatus.selesai) {
+        continue;
+      }
+      for (final d in upcomingOccurrences(t, until: gridEnd)) {
+        final nd = DateTime(d.year, d.month, d.day);
+        if (!nd.isBefore(gridStart)) previewDays.add(nd);
+      }
+    }
 
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 12, 20, 8),
@@ -266,6 +293,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
                                 : hasOverdue
                                     ? AppTheme.danger
                                     : AppTheme.primary,
+                          ),
+                        ),
+                      ],
+                      if (dayTasks.isEmpty &&
+                          previewDays.contains(
+                              DateTime(date.year, date.month, date.day))) ...[
+                        const SizedBox(height: 2),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppTheme.primary,
+                                width: 1.2),
                           ),
                         ),
                       ],
