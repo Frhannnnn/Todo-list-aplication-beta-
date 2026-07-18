@@ -11,6 +11,7 @@ import '../models/schedule_result_model.dart';
 import 'saw_service.dart';
 import 'notification_service.dart';
 import 'smart_scheduler_service.dart';
+import '../utils/recurrence.dart';
 
 class TaskProvider with ChangeNotifier {
   List<Task> _tasks = [];
@@ -675,6 +676,11 @@ class TaskProvider with ChangeNotifier {
     String? catatan,
     bool notifEnabled = true,
     List<String>? notifSchedule,
+    RecurrenceType recurrence = RecurrenceType.none,
+    int recurrenceInterval = 1,
+    RecurrenceUnit? recurrenceUnit,
+    DateTime? recurrenceEndDate,
+    int? recurrenceCount,
   }) async {
     final task = Task(
       id: _uuid.v4(),
@@ -690,6 +696,11 @@ class TaskProvider with ChangeNotifier {
       createdAt: DateTime.now(),
       notifEnabled: notifEnabled,
       notifSchedule: notifSchedule,
+      recurrence: recurrence,
+      recurrenceInterval: recurrenceInterval,
+      recurrenceUnit: recurrenceUnit,
+      recurrenceEndDate: recurrenceEndDate,
+      recurrenceCount: recurrenceCount,
     );
     _tasks.add(task);
     _recalculateSAW();
@@ -752,6 +763,14 @@ class TaskProvider with ChangeNotifier {
     String? catatan,
     bool? notifEnabled,
     List<String>? notifSchedule,
+    RecurrenceType? recurrence,
+    int? recurrenceInterval,
+    RecurrenceUnit? recurrenceUnit,
+    bool clearRecurrenceUnit = false,
+    DateTime? recurrenceEndDate,
+    bool clearRecurrenceEndDate = false,
+    int? recurrenceCount,
+    bool clearRecurrenceCount = false,
   }) async {
     final index = _tasks.indexWhere((t) => t.id == id);
     if (index == -1) return false;
@@ -785,8 +804,55 @@ class TaskProvider with ChangeNotifier {
       clearCompletedAt: clearCompletedAt,
       notifEnabled: notifEnabled,
       notifSchedule: notifSchedule,
+      recurrence: recurrence,
+      recurrenceInterval: recurrenceInterval,
+      recurrenceUnit: recurrenceUnit,
+      clearRecurrenceUnit: clearRecurrenceUnit,
+      recurrenceEndDate: recurrenceEndDate,
+      clearRecurrenceEndDate: clearRecurrenceEndDate,
+      recurrenceCount: recurrenceCount,
+      clearRecurrenceCount: clearRecurrenceCount,
     );
     _recalculateSAW();
+
+    // Spawn occurrence berikutnya bila tugas berulang baru saja diselesaikan.
+    // (Model lazy: hanya saat transisi ke selesai, satu occurrence terbuka.)
+    Task? spawned;
+    if (status == TaskStatus.selesai &&
+        oldStatus != TaskStatus.selesai &&
+        _tasks[index].recurrence != RecurrenceType.none) {
+      final base = _tasks[index];
+      final nextDate = nextOccurrenceDate(base);
+      if (nextDate != null) {
+        final seriesId = base.seriesId ?? base.id;
+        if (base.seriesId == null) {
+          _tasks[index] = base.copyWith(seriesId: seriesId);
+        }
+        spawned = Task(
+          id: _uuid.v4(),
+          namaTugas: base.namaTugas,
+          lingkupTugas: base.lingkupTugas,
+          mataKuliah: base.mataKuliah,
+          deadline: nextDate,
+          tingkatKepentingan: base.tingkatKepentingan,
+          estimasiWaktu: base.estimasiWaktu,
+          category: base.category,
+          catatan: base.catatan,
+          createdAt: DateTime.now(),
+          notifEnabled: base.notifEnabled,
+          notifSchedule: List.from(base.notifSchedule),
+          recurrence: base.recurrence,
+          recurrenceInterval: base.recurrenceInterval,
+          recurrenceUnit: base.recurrenceUnit,
+          recurrenceEndDate: base.recurrenceEndDate,
+          recurrenceCount: base.recurrenceCount,
+          recurrenceIndex: base.recurrenceIndex + 1,
+          seriesId: seriesId,
+        );
+        _tasks.add(spawned);
+        _recalculateSAW(); // ranking occurrence baru ikut terhitung
+      }
+    }
 
     if (status == TaskStatus.selesai) {
       _timeBlocks.removeWhere((block) => block.taskId == id);
@@ -797,6 +863,16 @@ class TaskProvider with ChangeNotifier {
     final saved = await _saveTasks();
     if (_notifEnabled) {
       await _notifService.scheduleTaskNotifications(_tasks[index]);
+      if (spawned != null) {
+        await _notifService.scheduleTaskNotifications(spawned);
+        if (_dailyReminderEnabled) {
+          await _notifService.scheduleDailyReminder(
+            hour: _dailyReminderHour,
+            minute: _dailyReminderMinute,
+            activeTasks: tugasAktif,
+          );
+        }
+      }
     }
     notifyListeners();
     return saved;
