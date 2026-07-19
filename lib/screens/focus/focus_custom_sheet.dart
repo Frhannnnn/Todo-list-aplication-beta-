@@ -6,9 +6,10 @@ import '../../utils/app_theme.dart';
 
 /// Bottom sheet konfigurasi Mode Kustom. Mengembalikan preset kustom + jumlah
 /// siklus + autoAdvance, atau null bila dibatalkan.
-Future<({FocusPreset preset, int cycles, bool autoAdvance})?>
+Future<({FocusPreset preset, int cycles, bool autoAdvance, FocusOptions options})?>
     showFocusCustomSheet(BuildContext context) {
-  return showModalBottomSheet<({FocusPreset preset, int cycles, bool autoAdvance})>(
+  return showModalBottomSheet<
+      ({FocusPreset preset, int cycles, bool autoAdvance, FocusOptions options})>(
     context: context,
     backgroundColor: Colors.white,
     isScrollControlled: true,
@@ -31,6 +32,11 @@ class _FocusCustomSheetState extends State<_FocusCustomSheet> {
   int _break = 5;
   int _cycles = 4;
   bool _auto = false;
+  bool _keepScreenOn = false;
+  bool _lockNavigation = false;
+  bool _strictMode = false;
+  bool _alarm = false;
+  bool _vibrate = false;
 
   @override
   Widget build(BuildContext context) {
@@ -98,21 +104,18 @@ class _FocusCustomSheetState extends State<_FocusCustomSheet> {
                       if (_cycles < 8) _cycles++;
                     })),
             const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: _auto,
-              onChanged: (v) => setState(() => _auto = v),
-              title: const Text('Mulai sesi berikutnya otomatis',
-                  style: TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
-            ),
+            _toggle('Mulai sesi berikutnya otomatis', _auto,
+                (v) => _auto = v),
             const SizedBox(height: 12),
-            const Text('Segera hadir', style: _label),
-            const SizedBox(height: 8),
-            _comingSoon('Pertahankan layar tetap menyala'),
-            _comingSoon('Kunci navigasi'),
-            _comingSoon('Strict Mode'),
-            _comingSoon('Alarm selesai'),
-            _comingSoon('Getaran'),
+            const Text('Opsi', style: _label),
+            const SizedBox(height: 4),
+            _toggle('Pertahankan layar tetap menyala', _keepScreenOn,
+                (v) => _keepScreenOn = v),
+            _toggle('Kunci navigasi', _lockNavigation,
+                (v) => _lockNavigation = v),
+            _toggle('Strict Mode', _strictMode, (v) => _strictMode = v),
+            _toggle('Alarm selesai', _alarm, (v) => _alarm = v),
+            _toggle('Getaran', _vibrate, (v) => _vibrate = v),
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
@@ -126,6 +129,13 @@ class _FocusCustomSheetState extends State<_FocusCustomSheet> {
                         breakMinutes: _break),
                     cycles: _cycles,
                     autoAdvance: _auto,
+                    options: FocusOptions(
+                      keepScreenOn: _keepScreenOn,
+                      lockNavigation: _lockNavigation,
+                      strictMode: _strictMode,
+                      alarmOnFinish: _alarm,
+                      vibrate: _vibrate,
+                    ),
                   ),
                 ),
                 child: const Text('Simpan'),
@@ -169,33 +179,13 @@ class _FocusCustomSheetState extends State<_FocusCustomSheet> {
     );
   }
 
-  Widget _comingSoon(String label) {
-    return Opacity(
-      opacity: 0.55,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(label,
-                  style: const TextStyle(
-                      fontSize: 14, color: AppTheme.textPrimary)),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: AppTheme.textSecondary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('Segera hadir',
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textSecondary)),
-            ),
-          ],
-        ),
-      ),
+  Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      value: value,
+      onChanged: (v) => setState(() => onChanged(v)),
+      title: Text(label,
+          style: const TextStyle(fontSize: 14, color: AppTheme.textPrimary)),
     );
   }
 }

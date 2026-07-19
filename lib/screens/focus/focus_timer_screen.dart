@@ -10,6 +10,7 @@ import '../../services/task_provider.dart';
 import '../../utils/app_theme.dart';
 import 'focus_complete_screen.dart';
 import 'focus_break_screen.dart';
+import 'focus_screen.dart';
 import 'widgets/focus_info_row.dart';
 
 /// Layar timer sesi fokus. Mode Fokus mengunci navigasi (PopScope); Mode
@@ -24,9 +25,62 @@ class FocusTimerScreen extends StatefulWidget {
   State<FocusTimerScreen> createState() => _FocusTimerScreenState();
 }
 
-class _FocusTimerScreenState extends State<FocusTimerScreen> {
+class _FocusTimerScreenState extends State<FocusTimerScreen>
+    with WidgetsBindingObserver {
   bool _navigatedToComplete = false;
   bool _navigatedToBreak = false;
+  bool _leftDuringSession = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Strict Mode: deteksi keluar app saat sesi berjalan.
+    final provider = context.read<FocusSessionProvider>();
+    final session = provider.active;
+    if (session == null || !session.strictMode) return;
+    if (state == AppLifecycleState.paused && provider.isRunning) {
+      _leftDuringSession = true;
+    } else if (state == AppLifecycleState.resumed && _leftDuringSession) {
+      _leftDuringSession = false;
+      _showStrictDialog(provider);
+    }
+  }
+
+  Future<void> _showStrictDialog(FocusSessionProvider provider) async {
+    if (!mounted) return;
+    final end = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Kamu meninggalkan sesi fokus'),
+        content: const Text('Tetap fokus atau akhiri sesi?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Akhiri Sesi')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Lanjut Fokus')),
+        ],
+      ),
+    );
+    if (end == true && mounted) {
+      await provider.endSession(taskProvider: context.read<TaskProvider>());
+      if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
 
   String _fmt(Duration d) {
     final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
@@ -109,6 +163,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
         }
 
         final isFocusMode = session.mode == FocusMode.focus;
+        final locked = isFocusMode || session.lockNavigation;
         final total = Duration(minutes: session.focusMinutes);
         final remaining = provider.remaining;
         final progress = total.inSeconds == 0
@@ -118,9 +173,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
             .format(DateTime.now().add(remaining));
 
         return PopScope(
-          canPop: !isFocusMode,
+          canPop: !locked,
           onPopInvokedWithResult: (didPop, _) async {
-            if (didPop || !isFocusMode) return;
+            if (didPop || !locked) return;
             await _handleEnd(provider);
           },
           child: Scaffold(
@@ -145,7 +200,18 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
                               provider.currentSession),
                           const SizedBox(height: 28),
                           _controls(provider),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    FocusScreen(task: widget.task),
+                              ),
+                            ),
+                            icon: const Icon(Icons.nightlight_round, size: 18),
+                            label: const Text('Layar Fokus'),
+                          ),
+                          const SizedBox(height: 4),
                           _streakPlaceholder(),
                         ],
                       ),

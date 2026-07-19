@@ -50,6 +50,24 @@ extension SessionTargetStatusLabel on SessionTargetStatus {
   }
 }
 
+/// Opsi native sesi fokus (Fase 3). Untuk mode preset non-Kustom dipakai
+/// default; untuk Mode Kustom diisi dari toggle.
+class FocusOptions {
+  final bool keepScreenOn; // wakelock selama sesi
+  final bool vibrate; // getaran saat sesi selesai
+  final bool alarmOnFinish; // suara saat sesi selesai
+  final bool lockNavigation; // paksa kunci navigasi (PopScope)
+  final bool strictMode; // keluar app saat sesi → dialog
+
+  const FocusOptions({
+    this.keepScreenOn = false,
+    this.vibrate = false,
+    this.alarmOnFinish = false,
+    this.lockNavigation = false,
+    this.strictMode = false,
+  });
+}
+
 /// Preset durasi fokus/istirahat siap pakai.
 class FocusPreset {
   final String name;
@@ -82,6 +100,11 @@ class FocusSession {
   final int totalSessions; // jumlah siklus fokus yang dijalankan
   final int breakMinutes; // durasi istirahat antar-siklus
   final bool autoAdvance; // lanjut sesi berikutnya otomatis
+  final bool keepScreenOn;
+  final bool vibrate;
+  final bool alarmOnFinish;
+  final bool lockNavigation;
+  final bool strictMode;
   final DateTime startedAt;
   final DateTime? endedAt;
   final SessionTargetStatus? targetStatus;
@@ -97,6 +120,11 @@ class FocusSession {
     this.totalSessions = 1,
     this.breakMinutes = 0,
     this.autoAdvance = false,
+    this.keepScreenOn = false,
+    this.vibrate = false,
+    this.alarmOnFinish = false,
+    this.lockNavigation = false,
+    this.strictMode = false,
     required this.startedAt,
     this.endedAt,
     this.targetStatus,
@@ -117,6 +145,11 @@ class FocusSession {
       totalSessions: totalSessions,
       breakMinutes: breakMinutes,
       autoAdvance: autoAdvance,
+      keepScreenOn: keepScreenOn,
+      vibrate: vibrate,
+      alarmOnFinish: alarmOnFinish,
+      lockNavigation: lockNavigation,
+      strictMode: strictMode,
       startedAt: startedAt,
       endedAt: endedAt ?? this.endedAt,
       targetStatus: targetStatus ?? this.targetStatus,
@@ -134,6 +167,11 @@ class FocusSession {
         'totalSessions': totalSessions,
         'breakMinutes': breakMinutes,
         'autoAdvance': autoAdvance,
+        'keepScreenOn': keepScreenOn,
+        'vibrate': vibrate,
+        'alarmOnFinish': alarmOnFinish,
+        'lockNavigation': lockNavigation,
+        'strictMode': strictMode,
         'startedAt': startedAt.toIso8601String(),
         'endedAt': endedAt?.toIso8601String(),
         'targetStatus': targetStatus?.index,
@@ -165,6 +203,11 @@ class FocusSession {
       totalSessions: json['totalSessions'] as int? ?? 1,
       breakMinutes: json['breakMinutes'] as int? ?? 0,
       autoAdvance: json['autoAdvance'] as bool? ?? false,
+      keepScreenOn: json['keepScreenOn'] as bool? ?? false,
+      vibrate: json['vibrate'] as bool? ?? false,
+      alarmOnFinish: json['alarmOnFinish'] as bool? ?? false,
+      lockNavigation: json['lockNavigation'] as bool? ?? false,
+      strictMode: json['strictMode'] as bool? ?? false,
       startedAt: DateTime.parse(json['startedAt'] as String),
       endedAt: json['endedAt'] != null
           ? DateTime.parse(json['endedAt'] as String)

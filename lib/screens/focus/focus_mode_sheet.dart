@@ -12,6 +12,7 @@ typedef FocusModeSelection = ({
   FocusPreset preset,
   int cycles,
   bool autoAdvance,
+  FocusOptions options,
 });
 
 /// Bottom sheet pemilihan mode & preset (atau konfigurasi Kustom) sebelum
@@ -49,6 +50,7 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
       preset: cfg.preset,
       cycles: cfg.cycles,
       autoAdvance: cfg.autoAdvance,
+      options: cfg.options,
     ));
   }
 
@@ -115,6 +117,8 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
                     preset: _preset,
                     cycles: 0,
                     autoAdvance: false,
+                    options: FocusOptions(
+                        lockNavigation: _mode == FocusMode.focus),
                   )),
                   child: const Text('Lanjut'),
                 ),

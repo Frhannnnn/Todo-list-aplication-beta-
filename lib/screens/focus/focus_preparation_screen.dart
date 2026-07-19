@@ -22,6 +22,7 @@ class FocusPreparationScreen extends StatefulWidget {
   final int recommendedSessions;
   final int totalSessions;
   final bool autoAdvance;
+  final FocusOptions options;
 
   const FocusPreparationScreen({
     super.key,
@@ -32,6 +33,7 @@ class FocusPreparationScreen extends StatefulWidget {
     required this.recommendedSessions,
     required this.totalSessions,
     required this.autoAdvance,
+    required this.options,
   });
 
   @override
@@ -71,6 +73,7 @@ class _FocusPreparationScreenState extends State<FocusPreparationScreen> {
           recommendedSessions: widget.recommendedSessions,
           totalSessions: widget.totalSessions,
           autoAdvance: widget.autoAdvance,
+          options: widget.options,
         );
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(

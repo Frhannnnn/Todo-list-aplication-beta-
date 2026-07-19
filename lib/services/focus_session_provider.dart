@@ -1,7 +1,10 @@
 // lib/services/focus_session_provider.dart
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:uuid/uuid.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
+import 'package:vibration/vibration.dart';
 import '../models/focus_session_model.dart';
 import '../models/task_model.dart';
 import 'focus_timer_service.dart';
@@ -64,6 +67,7 @@ class FocusSessionProvider with ChangeNotifier {
     if (_state == FocusSessionState.running) {
       final s = _active;
       if (s != null) _accumulatedFocusMinutes += s.focusMinutes;
+      _playFinishEffects();
       if ((s?.autoAdvance ?? false) && hasNextSession) {
         if ((s?.breakMinutes ?? 0) > 0) {
           startBreak();
@@ -90,6 +94,7 @@ class FocusSessionProvider with ChangeNotifier {
     required int recommendedSessions,
     required int totalSessions,
     required bool autoAdvance,
+    required FocusOptions options,
   }) {
     // Minta izin notifikasi (Android 13+) agar foreground notification tampil.
     try {
@@ -109,6 +114,11 @@ class FocusSessionProvider with ChangeNotifier {
       totalSessions: totalSessions < 1 ? 1 : totalSessions,
       breakMinutes: preset.breakMinutes,
       autoAdvance: autoAdvance,
+      keepScreenOn: options.keepScreenOn,
+      vibrate: options.vibrate,
+      alarmOnFinish: options.alarmOnFinish,
+      lockNavigation: options.lockNavigation,
+      strictMode: options.strictMode,
       startedAt: DateTime.now(),
     );
     _currentSession = 1;
@@ -125,6 +135,7 @@ class FocusSessionProvider with ChangeNotifier {
     _timer.start(total);
     _persist();
     _updateNotification();
+    _applyWakelock();
     notifyListeners();
   }
 
@@ -142,6 +153,7 @@ class FocusSessionProvider with ChangeNotifier {
     _remaining = _timer.remaining;
     _persist();
     _updateNotification();
+    _applyWakelock();
     notifyListeners();
   }
 
@@ -155,6 +167,7 @@ class FocusSessionProvider with ChangeNotifier {
     _timer.start(total);
     _persist();
     _updateNotification();
+    _applyWakelock();
     notifyListeners();
   }
 
@@ -227,6 +240,40 @@ class FocusSessionProvider with ChangeNotifier {
     _remaining = Duration.zero;
     _currentSession = 1;
     _accumulatedFocusMinutes = 0;
+    _setWakelock(false);
+  }
+
+  /// Wakelock aktif bila ada sesi aktif dan opsi keepScreenOn menyala.
+  void _applyWakelock() {
+    final s = _active;
+    _setWakelock(s != null && s.keepScreenOn);
+  }
+
+  /// Dipanggil dari Layar Fokus untuk mengembalikan wakelock ke keadaan sesi
+  /// setelah layar OLED ditutup.
+  void refreshWakelock() => _applyWakelock();
+
+  void _setWakelock(bool enable) {
+    try {
+      WakelockPlus.toggle(enable: enable);
+    } catch (_) {}
+  }
+
+  Future<void> _playFinishEffects() async {
+    final s = _active;
+    if (s == null) return;
+    if (s.vibrate) {
+      try {
+        if ((await Vibration.hasVibrator()) == true) {
+          Vibration.vibrate(duration: 500);
+        }
+      } catch (_) {}
+    }
+    if (s.alarmOnFinish) {
+      try {
+        SystemSound.play(SystemSoundType.alert);
+      } catch (_) {}
+    }
   }
 
   void _persist() {

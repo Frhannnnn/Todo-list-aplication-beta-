@@ -55,6 +55,7 @@ Future<void> _startFocusFlow(
         recommendedSessions: recommendedSessions,
         totalSessions: totalSessions,
         autoAdvance: selection.autoAdvance,
+        options: selection.options,
       ),
     ),
   );
