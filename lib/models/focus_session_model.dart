@@ -217,6 +217,61 @@ class FocusSession {
   }
 }
 
+/// Satu entri riwayat Focus Session (untuk halaman Riwayat).
+class FocusHistoryEntry {
+  final DateTime date;
+  final String taskName;
+  final int focusMinutes; // total menit fokus dalam sesi
+  final int sessionsCompleted;
+  final String? targetText;
+  final SessionTargetStatus? targetStatus;
+  final FocusMode mode;
+
+  const FocusHistoryEntry({
+    required this.date,
+    required this.taskName,
+    required this.focusMinutes,
+    required this.sessionsCompleted,
+    this.targetText,
+    this.targetStatus,
+    required this.mode,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'date': date.toIso8601String(),
+        'taskName': taskName,
+        'focusMinutes': focusMinutes,
+        'sessionsCompleted': sessionsCompleted,
+        'targetText': targetText,
+        'targetStatus': targetStatus?.index,
+        'mode': mode.index,
+      };
+
+  factory FocusHistoryEntry.fromJson(Map<String, dynamic> json) {
+    final rawStatus = json['targetStatus'];
+    final targetStatus = (rawStatus is int &&
+            rawStatus >= 0 &&
+            rawStatus < SessionTargetStatus.values.length)
+        ? SessionTargetStatus.values[rawStatus]
+        : null;
+    final rawMode = json['mode'];
+    final mode = (rawMode is int &&
+            rawMode >= 0 &&
+            rawMode < FocusMode.values.length)
+        ? FocusMode.values[rawMode]
+        : FocusMode.focus;
+    return FocusHistoryEntry(
+      date: DateTime.parse(json['date'] as String),
+      taskName: json['taskName'] as String? ?? 'Tugas',
+      focusMinutes: json['focusMinutes'] as int? ?? 0,
+      sessionsCompleted: json['sessionsCompleted'] as int? ?? 0,
+      targetText: json['targetText'] as String?,
+      targetStatus: targetStatus,
+      mode: mode,
+    );
+  }
+}
+
 /// Snapshot sesi aktif untuk disimpan/dipulihkan (fase restore di masa depan).
 class ActiveSessionSnapshot {
   final FocusSession session;

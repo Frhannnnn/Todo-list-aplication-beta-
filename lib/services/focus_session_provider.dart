@@ -29,6 +29,10 @@ class FocusSessionProvider with ChangeNotifier {
   FocusSessionState _state = FocusSessionState.idle;
   int _currentSession = 1;
   int _accumulatedFocusMinutes = 0;
+  int _focusStreak = 0;
+  String? _lastFocusDate;
+
+  int get focusStreak => _focusStreak;
 
   FocusSession? get active => _active;
   Duration get remaining => _remaining;
@@ -49,6 +53,56 @@ class FocusSessionProvider with ChangeNotifier {
     };
     _timer.onFinished = _handleTimerFinished;
     _notif.onFocusAction = _onNotifAction;
+    _loadStats();
+  }
+
+  Future<void> _loadStats() async {
+    final s = await _repo.loadStreak();
+    _lastFocusDate = s.lastDate;
+    _focusStreak = _effectiveStreak(s.streak, s.lastDate);
+    notifyListeners();
+  }
+
+  String _dateStr(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  /// Streak dianggap 0 bila hari fokus terakhir bukan hari ini/kemarin.
+  int _effectiveStreak(int streak, String? lastDate) {
+    if (lastDate == null) return 0;
+    final today = _dateStr(DateTime.now());
+    final yesterday =
+        _dateStr(DateTime.now().subtract(const Duration(days: 1)));
+    return (lastDate == today || lastDate == yesterday) ? streak : 0;
+  }
+
+  void _recordFocusDay() {
+    final today = _dateStr(DateTime.now());
+    if (_lastFocusDate == today) return; // sudah dihitung hari ini
+    final yesterday =
+        _dateStr(DateTime.now().subtract(const Duration(days: 1)));
+    final base = (_lastFocusDate == yesterday) ? _focusStreak : 0;
+    _focusStreak = base + 1;
+    _lastFocusDate = today;
+    _repo.saveStreak(_focusStreak, today);
+    notifyListeners();
+  }
+
+  Future<List<FocusHistoryEntry>> loadHistory() => _repo.loadHistory();
+
+  void _saveHistory(SessionTargetStatus? status) {
+    final s = _active;
+    if (s == null || _accumulatedFocusMinutes <= 0) return;
+    final completed =
+        s.focusMinutes > 0 ? (_accumulatedFocusMinutes ~/ s.focusMinutes) : 0;
+    _repo.addHistory(FocusHistoryEntry(
+      date: DateTime.now(),
+      taskName: _taskNameFor(s.taskId),
+      focusMinutes: _accumulatedFocusMinutes,
+      sessionsCompleted: completed,
+      targetText: s.targetText,
+      targetStatus: status,
+      mode: s.mode,
+    ));
   }
 
   /// Dipasang sekali dari root agar aksi notifikasi & akumulasi menit bisa
@@ -68,6 +122,7 @@ class FocusSessionProvider with ChangeNotifier {
       final s = _active;
       if (s != null) _accumulatedFocusMinutes += s.focusMinutes;
       _playFinishEffects();
+      _recordFocusDay();
       if ((s?.autoAdvance ?? false) && hasNextSession) {
         if ((s?.breakMinutes ?? 0) > 0) {
           startBreak();
@@ -205,6 +260,7 @@ class FocusSessionProvider with ChangeNotifier {
   /// dihitung ke tugas.
   Future<void> endSession({TaskProvider? taskProvider}) async {
     _addAccumulatedMinutes(taskProvider);
+    _saveHistory(null);
     _timer.pause();
     _cancelNotification();
     _reset();
@@ -219,6 +275,7 @@ class FocusSessionProvider with ChangeNotifier {
     TaskProvider? taskProvider,
   }) async {
     _addAccumulatedMinutes(taskProvider);
+    _saveHistory(status);
     _timer.pause();
     _cancelNotification();
     _reset();

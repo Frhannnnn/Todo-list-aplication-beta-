@@ -212,7 +212,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                             label: const Text('Layar Fokus'),
                           ),
                           const SizedBox(height: 4),
-                          _streakPlaceholder(),
+                          _streakLabel(provider.focusStreak),
                         ],
                       ),
                     ),
@@ -371,9 +371,10 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     );
   }
 
-  /// Placeholder Focus Streak (nilai nyata diisi pada Fase 4).
-  Widget _streakPlaceholder() {
-    return const Text('🔥 Fokus hari ini',
-        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary));
+  Widget _streakLabel(int streak) {
+    return Text(
+      streak > 0 ? '🔥 $streak Hari Fokus' : '🔥 Mulai streak fokusmu',
+      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+    );
   }
 }
