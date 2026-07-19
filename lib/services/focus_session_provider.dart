@@ -91,6 +91,11 @@ class FocusSessionProvider with ChangeNotifier {
     required int totalSessions,
     required bool autoAdvance,
   }) {
+    // Minta izin notifikasi (Android 13+) agar foreground notification tampil.
+    try {
+      _notif.requestPermission();
+    } catch (_) {}
+
     _active = FocusSession(
       id: _uuid.v4(),
       taskId: task.id,
