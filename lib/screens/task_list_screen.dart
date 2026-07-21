@@ -10,6 +10,9 @@ import '../widgets/rename_dialog.dart';
 import '../utils/task_status_actions.dart';
 import 'add_edit_task_screen.dart';
 
+const TextStyle _sheetLabel = TextStyle(
+    fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary);
+
 class TaskListScreen extends StatefulWidget {
   const TaskListScreen({super.key});
 
@@ -49,8 +52,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
                 children: [
                   _buildHeader(context, provider),
                   _buildTabBar(tabs),
-                  _buildSearchBar(),
-                  _buildFilterSortBar(),
+                  _buildSearchFilterRow(context),
                   Expanded(
                     child: TabBarView(
                       children: tabViews,
@@ -139,41 +141,189 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
+  /// Baris tunggal: kolom pencarian + satu tombol filter. Filter prioritas &
+  /// urutan dipindah ke bottom sheet supaya daftar tugas tidak tertutup tiga
+  /// baris kontrol.
+  Widget _buildSearchFilterRow(BuildContext context) {
+    final filterActive = _filterPrioritas != 'Semua' || _sortMode != 'Default';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 8),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Cari tugas...',
-          hintStyle:
-              const TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-          prefixIcon:
-              const Icon(Icons.search_rounded, color: AppTheme.textSecondary),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear_rounded,
-                      color: AppTheme.textSecondary),
-                  onPressed: () => setState(() => _searchQuery = ''),
-                )
-              : null,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppTheme.border),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              decoration: InputDecoration(
+                hintText: 'Cari tugas...',
+                hintStyle: const TextStyle(
+                    color: AppTheme.textSecondary, fontSize: 14),
+                prefixIcon: const Icon(Icons.search_rounded,
+                    color: AppTheme.textSecondary),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded,
+                            color: AppTheme.textSecondary),
+                        onPressed: () => setState(() => _searchQuery = ''),
+                      )
+                    : null,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppTheme.border),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: const BorderSide(color: AppTheme.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: AppTheme.primary, width: 1.5),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppTheme.border),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () => _showFilterSheet(context),
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: filterActive ? AppTheme.primary : Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                    color: filterActive ? AppTheme.primary : AppTheme.border),
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Icon(Icons.filter_list_rounded,
+                      color: filterActive
+                          ? Colors.white
+                          : AppTheme.textSecondary,
+                      size: 22),
+                  if (filterActive)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
+        ],
+      ),
+    );
+  }
+
+  /// Bottom sheet filter prioritas + urutan. Perubahan langsung diterapkan
+  /// (setState induk) sehingga daftar ikut ter-update.
+  void _showFilterSheet(BuildContext context) {
+    const filterOptions = ['Semua', 'Tinggi', 'Sedang', 'Rendah'];
+    const sortOptions = ['Default', 'Prioritas Tertinggi'];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Filter & Urutan',
+                        style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textPrimary)),
+                    if (_filterPrioritas != 'Semua' || _sortMode != 'Default')
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _filterPrioritas = 'Semua';
+                            _sortMode = 'Default';
+                          });
+                          setSheet(() {});
+                        },
+                        child: const Text('Reset'),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                const Text('Prioritas', style: _sheetLabel),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: filterOptions.map((label) {
+                    final selected = _filterPrioritas == label;
+                    return _sheetChip(label, selected, AppTheme.primary, () {
+                      setState(() => _filterPrioritas = label);
+                      setSheet(() {});
+                    });
+                  }).toList(),
+                ),
+                const SizedBox(height: 16),
+                const Text('Urutkan', style: _sheetLabel),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: sortOptions.map((label) {
+                    final selected = _sortMode == label;
+                    return _sheetChip(label, selected, AppTheme.secondary, () {
+                      setState(() => _sortMode = label);
+                      setSheet(() {});
+                    });
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
-        onChanged: (value) => setState(() => _searchQuery = value),
+      ),
+    );
+  }
+
+  Widget _sheetChip(
+      String label, bool selected, Color accent, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? accent : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: selected ? accent : AppTheme.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : AppTheme.textSecondary,
+          ),
+        ),
       ),
     );
   }
@@ -208,89 +358,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
     return tasks;
   }
 
-  Widget _buildFilterSortBar() {
-    const filterOptions = ['Semua', 'Tinggi', 'Sedang', 'Rendah'];
-    const sortOptions = ['Default', 'Prioritas Tertinggi'];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            ...filterOptions.map((label) {
-              final isSelected = _filterPrioritas == label;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: GestureDetector(
-                  onTap: () => setState(() => _filterPrioritas = label),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: isSelected ? AppTheme.primary : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color:
-                            isSelected ? AppTheme.primary : AppTheme.border,
-                      ),
-                    ),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? Colors.white
-                            : AppTheme.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-            const SizedBox(width: 8),
-            Container(width: 1, height: 20, color: AppTheme.border),
-            const SizedBox(width: 8),
-            ...sortOptions.map((label) {
-              final isSelected = _sortMode == label;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: GestureDetector(
-                  onTap: () => setState(() => _sortMode = label),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color:
-                          isSelected ? AppTheme.secondary : Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: isSelected
-                            ? AppTheme.secondary
-                            : AppTheme.border,
-                      ),
-                    ),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: isSelected
-                            ? Colors.white
-                            : AppTheme.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildTaskList(String? scope, TaskProvider provider) {
     List<Task> tasks;
     if (scope == null) {
@@ -320,7 +387,9 @@ class _TaskListScreenState extends State<TaskListScreen> {
         final task = tasks[index];
         return TaskCardWidget(
           task: task,
-          showRanking: true,
+          // Rank numerik (#N) redundan dengan label prioritas (Tinggi/Sedang/
+          // Rendah) di kartu — biarkan #N khusus di layar Prioritas.
+          showRanking: false,
           totalActiveTasks: totalActiveTasks,
           onTap: () => Navigator.push(
             context,

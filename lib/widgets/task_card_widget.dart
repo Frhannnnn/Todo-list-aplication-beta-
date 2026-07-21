@@ -108,7 +108,7 @@ class TaskCardWidget extends StatelessWidget {
                   _buildRankingBadge(),
                 ],
                 const Spacer(),
-                _buildStatusBadge(),
+                _buildStatusDot(),
               ],
             ),
             // Actions
@@ -292,22 +292,30 @@ class TaskCardWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildStatusBadge() {
-    Color color = AppTheme.getStatusColor(task.status);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        task.statusLabel,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
+  /// Status ditampilkan sebagai titik warna ringkas, bukan pill teks penuh —
+  /// label statusnya sudah tersirat dari aksi ("Mulai"/"Selesaikan"/"Buka
+  /// Lagi") dan coretan judul saat selesai. Titik + teks kecil menjaga makna
+  /// tanpa menambah bobot visual sebesar badge.
+  Widget _buildStatusDot() {
+    final color = AppTheme.getStatusColor(task.status);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
-      ),
+        const SizedBox(width: 5),
+        Text(
+          task.statusLabel,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 
