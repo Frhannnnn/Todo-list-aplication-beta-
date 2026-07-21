@@ -62,6 +62,7 @@ class MainNavigation extends StatefulWidget {
 
   static const int dashboardTab = 0;
   static const int taskListTab = 1;
+  static const int calendarTab = 3;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();

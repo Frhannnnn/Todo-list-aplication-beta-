@@ -1,13 +1,13 @@
 // lib/screens/dashboard_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import '../services/task_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/recurrence.dart';
 import '../widgets/task_card_widget.dart';
+import '../main.dart';
 import 'add_edit_task_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -339,21 +339,27 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildTaskCalendar(TaskProvider provider) {
     final now = DateTime.now();
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final leadingBlanks =
-        DateTime(now.year, now.month, 1).weekday - DateTime.monday;
-    final totalCells = leadingBlanks + daysInMonth;
+    final today = DateTime(now.year, now.month, now.day);
+    // Minggu berjalan: Senin s/d Minggu yang memuat hari ini.
+    final weekStart =
+        today.subtract(Duration(days: today.weekday - DateTime.monday));
+    final weekDays = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+    final weekEnd = DateTime(
+        weekStart.year, weekStart.month, weekStart.day + 6, 23, 59);
 
-    final monthEnd = DateTime(now.year, now.month, daysInMonth, 23, 59);
-    final previewDays = <int>{};
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+
+    // Tanggal dalam minggu ini yang punya occurrence tugas berulang.
+    final previewDays = <DateTime>{};
     for (final t in provider.tasks) {
       if (t.recurrence == RecurrenceType.none ||
           t.status == TaskStatus.selesai) {
         continue;
       }
-      for (final d in upcomingOccurrences(t, until: monthEnd)) {
-        if (d.year == now.year && d.month == now.month) {
-          previewDays.add(d.day);
+      for (final d in upcomingOccurrences(t, until: weekEnd)) {
+        if (!d.isBefore(weekStart)) {
+          previewDays.add(DateTime(d.year, d.month, d.day));
         }
       }
     }
@@ -380,112 +386,117 @@ class DashboardScreen extends StatelessWidget {
                   color: AppTheme.textPrimary,
                 ),
               ),
-              Text(
-                DateFormat('MMMM yyyy', 'id_ID').format(now),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary,
+              InkWell(
+                onTap: () =>
+                    MainNavigation.tabIndex.value = MainNavigation.calendarTab,
+                borderRadius: BorderRadius.circular(20),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Buka Kalender',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(Icons.chevron_right,
+                          size: 16, color: AppTheme.primary),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
-            children: const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
-                .map(
-                  (d) => Expanded(
-                    child: Center(
-                      child: Text(
-                        d,
+            children: weekDays.map((date) {
+              final isToday = sameDay(date, today);
+              final dayTasks = provider.tasks
+                  .where((t) => sameDay(t.deadline, date))
+                  .toList();
+              final hasTask = dayTasks.isNotEmpty;
+              final hasOverdue = dayTasks.any((t) => t.isOverdue);
+              final hasPreview = previewDays.contains(date);
+              const weekdayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Column(
+                    children: [
+                      Text(
+                        weekdayLabels[date.weekday - 1],
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textSecondary,
                         ),
                       ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 8),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: totalCells,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-            ),
-            itemBuilder: (context, index) {
-              if (index < leadingBlanks) return const SizedBox.shrink();
-              final day = index - leadingBlanks + 1;
-              final date = DateTime(now.year, now.month, day);
-              final isToday = day == now.day;
-              final dayTasks = provider.tasks
-                  .where((t) =>
-                      t.deadline.year == date.year &&
-                      t.deadline.month == date.month &&
-                      t.deadline.day == date.day)
-                  .toList();
-              final hasTask = dayTasks.isNotEmpty;
-              final hasOverdue = dayTasks.any((t) => t.isOverdue);
-
-              return Container(
-                decoration: BoxDecoration(
-                  color: isToday
-                      ? AppTheme.primary
-                      : hasTask
-                          ? AppTheme.primary.withValues(alpha: 0.08)
-                          : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '$day',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: isToday || hasTask
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: isToday ? Colors.white : AppTheme.textPrimary,
-                      ),
-                    ),
-                    if (hasTask) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 6),
                       Container(
-                        width: 5,
-                        height: 5,
+                        height: 44,
                         decoration: BoxDecoration(
-                          shape: BoxShape.circle,
                           color: isToday
-                              ? Colors.white
-                              : hasOverdue
-                                  ? AppTheme.danger
-                                  : AppTheme.primary,
+                              ? AppTheme.primary
+                              : hasTask
+                                  ? AppTheme.primary.withValues(alpha: 0.08)
+                                  : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${date.day}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isToday || hasTask
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isToday
+                                    ? Colors.white
+                                    : AppTheme.textPrimary,
+                              ),
+                            ),
+                            if (hasTask) ...[
+                              const SizedBox(height: 3),
+                              Container(
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isToday
+                                      ? Colors.white
+                                      : hasOverdue
+                                          ? AppTheme.danger
+                                          : AppTheme.primary,
+                                ),
+                              ),
+                            ] else if (!isToday && hasPreview) ...[
+                              const SizedBox(height: 3),
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: AppTheme.primary, width: 1.2),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],
-                    if (!hasTask && !isToday && previewDays.contains(day)) ...[
-                      const SizedBox(height: 2),
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: AppTheme.primary, width: 1.2),
-                        ),
-                      ),
-                    ],
-                  ],
+                  ),
                 ),
               );
-            },
+            }).toList(),
           ),
         ],
       ),

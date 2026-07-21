@@ -44,6 +44,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   DateTime? _recurrenceEndDate;
   int? _recurrenceCount;
 
+  bool _isSaving = false;
+  bool _showAdvanced = false;
+
   bool get isEdit => widget.task != null;
   bool get _isAkademik => _lingkupTugas == _kAkademikScope;
 
@@ -51,6 +54,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   void initState() {
     super.initState();
     if (isEdit) {
+      // Saat mengedit, tampilkan seluruh opsi agar tidak ada yang tersembunyi.
+      _showAdvanced = true;
       final t = widget.task!;
       _namaTugasCtrl.text = t.namaTugas;
       _catatanCtrl.text = t.catatan ?? '';
@@ -150,42 +155,53 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                   _buildUrgensiIndicator(),
                 ]),
                 const SizedBox(height: 16),
-                _buildSection('Pengulangan', [
-                  _buildRecurrencePicker(),
-                ]),
-                const SizedBox(height: 16),
                 _buildSection('Kategori', [
                   _buildKategoriDropdown(provider),
                 ]),
                 const SizedBox(height: 16),
-                _buildSection('Parameter SAW', [
-                  _buildKepentinganSlider(),
-                  const SizedBox(height: 12),
-                  _buildEisenhowerSummary(),
-                  const SizedBox(height: 12),
-                  _buildSlider(
-                    'Estimasi Waktu (jam)',
-                    _estimasiWaktu,
-                    (v) => setState(() => _estimasiWaktu = v.round()),
-                    hint: 'Berapa jam yang dibutuhkan?',
-                    max: 10,
-                  ),
-                ]),
-                const SizedBox(height: 16),
-                _buildSection('Status', [_buildStatusSelector()]),
-                const SizedBox(height: 16),
-                _buildSection('Notifikasi', [_buildNotifSection()]),
-                const SizedBox(height: 16),
-                _buildSection('Catatan', [_buildCatatanField()]),
+                _buildAdvancedToggle(),
+                if (_showAdvanced) ...[
+                  const SizedBox(height: 16),
+                  _buildSection('Pengulangan', [
+                    _buildRecurrencePicker(),
+                  ]),
+                  const SizedBox(height: 16),
+                  _buildSection('Parameter SAW', [
+                    _buildKepentinganSlider(),
+                    const SizedBox(height: 12),
+                    _buildEisenhowerSummary(),
+                    const SizedBox(height: 12),
+                    _buildSlider(
+                      'Estimasi Waktu (jam)',
+                      _estimasiWaktu,
+                      (v) => setState(() => _estimasiWaktu = v.round()),
+                      hint: 'Berapa jam yang dibutuhkan?',
+                      max: 10,
+                    ),
+                  ]),
+                  const SizedBox(height: 16),
+                  _buildSection('Status', [_buildStatusSelector()]),
+                  const SizedBox(height: 16),
+                  _buildSection('Notifikasi', [_buildNotifSection()]),
+                  const SizedBox(height: 16),
+                  _buildSection('Catatan', [_buildCatatanField()]),
+                ],
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _save,
+                  onPressed: _isSaving ? null : _save,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      isEdit ? 'Simpan Perubahan' : 'Tambah Tugas',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(
+                            isEdit ? 'Simpan Perubahan' : 'Tambah Tugas',
+                            style: const TextStyle(fontSize: 16),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -194,6 +210,42 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           ),
         );
       },
+    );
+  }
+
+  /// Tombol lipat opsi lanjutan. Untuk tugas baru, bagian teknis (pengulangan,
+  /// parameter SAW, status, notifikasi, catatan) disembunyikan agar pengguna
+  /// cukup mengisi nama, deadline, dan kategori. Nilai default sudah memadai.
+  Widget _buildAdvancedToggle() {
+    return InkWell(
+      onTap: () => setState(() => _showAdvanced = !_showAdvanced),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.tune_rounded, color: AppTheme.primary, size: 20),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text('Opsi lanjutan',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primary)),
+            ),
+            Icon(
+                _showAdvanced
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                color: AppTheme.textSecondary),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1236,6 +1288,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   }
 
   void _save() async {
+    // Cegah tugas terdaftar dua kali akibat tap ganda pada tombol simpan
+    // saat proses async (scheduler/penyimpanan) masih berjalan.
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     // Validate lingkupTugas
@@ -1247,6 +1302,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       );
       return;
     }
+
+    setState(() => _isSaving = true);
 
     final provider = context.read<TaskProvider>();
     final mataKuliah =
@@ -1306,7 +1363,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     if (!saved) {
       // Gagal simpan tidak boleh diam-diam (Issue #7) — tetap di form
       // supaya input user tidak hilang, dan beri tahu jelas bahwa harus
-      // dicoba lagi.
+      // dicoba lagi. Buka kunci tombol agar user bisa mencoba ulang.
+      setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Gagal menyimpan — coba lagi'),
