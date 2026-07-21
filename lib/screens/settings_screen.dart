@@ -6,9 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/task_provider.dart';
+import '../services/focus_session_provider.dart';
 import '../utils/app_theme.dart';
 import 'notification_settings_screen.dart';
 import 'schedule_settings_screen.dart';
+import 'focus/focus_history_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -32,6 +34,8 @@ class SettingsScreen extends StatelessWidget {
             const SizedBox(height: 20),
             _buildProfileCard(),
             const SizedBox(height: 16),
+            _buildFocusCard(context),
+            const SizedBox(height: 16),
             _buildInfoCard(context),
             const SizedBox(height: 16),
             _buildNotifCard(context),
@@ -45,6 +49,79 @@ class SettingsScreen extends StatelessWidget {
             _buildDangerZone(context),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFocusCard(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          Consumer<FocusSessionProvider>(
+            builder: (context, focus, _) => Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppTheme.warning.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.local_fire_department_rounded,
+                      color: AppTheme.warning),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Focus Streak',
+                          style: TextStyle(
+                              fontSize: 13, color: AppTheme.textSecondary)),
+                      Text('${focus.focusStreak} Hari Fokus',
+                          style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.textPrimary)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: AppTheme.border.withValues(alpha: 0.6)),
+          const SizedBox(height: 4),
+          InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FocusHistoryScreen()),
+            ),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  Icon(Icons.history_rounded, color: AppTheme.primary, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text('Riwayat Focus Session',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.textPrimary)),
+                  ),
+                  Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

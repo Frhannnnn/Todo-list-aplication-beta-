@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/task_provider.dart';
+import 'services/focus_session_provider.dart';
 import 'utils/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/task_list_screen.dart';
@@ -36,8 +37,11 @@ class TugasKuApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => TaskProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => TaskProvider()),
+        ChangeNotifierProvider(create: (_) => FocusSessionProvider()),
+      ],
       child: MaterialApp(
         title: 'TugasKu',
         debugShowCheckedModeBanner: false,
@@ -90,6 +94,14 @@ class _MainNavigationState extends State<MainNavigation>
       const Duration(minutes: 5),
       (_) => context.read<TaskProvider>().refreshUrgensi(),
     );
+    // Hubungkan FocusSessionProvider ke TaskProvider (untuk aksi notifikasi &
+    // akumulasi menit fokus tanpa BuildContext).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context
+          .read<FocusSessionProvider>()
+          .attachTaskProvider(context.read<TaskProvider>());
+    });
   }
 
   @override
@@ -108,6 +120,7 @@ class _MainNavigationState extends State<MainNavigation>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       context.read<TaskProvider>().refreshUrgensi();
+      context.read<FocusSessionProvider>().syncFromBackground();
     }
   }
 
