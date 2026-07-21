@@ -312,12 +312,12 @@ class NotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
 
-    await _plugin.zonedSchedule(
-      9999,
-      '📚 Selamat Pagi!',
-      'Kamu punya $activeTasks tugas yang belum selesai. Yuk cek TugasKu!',
-      scheduledDate,
-      const NotificationDetails(
+    await _zonedScheduleSafe(
+      id: 9999,
+      title: '📚 Selamat Pagi!',
+      body: 'Kamu punya $activeTasks tugas yang belum selesai. Yuk cek TugasKu!',
+      when: scheduledDate,
+      details: const NotificationDetails(
         android: AndroidNotificationDetails(
           _channelIdReminder,
           'Pengingat Tugas',
@@ -326,9 +326,6 @@ class NotificationService {
         ),
         iOS: DarwinNotificationDetails(),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }
@@ -351,12 +348,12 @@ class NotificationService {
   }) async {
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
-    await _plugin.zonedSchedule(
-      id,
-      title,
-      body,
-      tzTime,
-      NotificationDetails(
+    await _zonedScheduleSafe(
+      id: id,
+      title: title,
+      body: body,
+      when: tzTime,
+      details: NotificationDetails(
         android: AndroidNotificationDetails(
           channelId,
           channelId == _channelIdDeadline
@@ -378,11 +375,57 @@ class NotificationService {
           presentSound: true,
         ),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: payload,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
     );
+  }
+
+  /// Jadwalkan notifikasi dengan mode alarm tepat. Bila izin
+  /// SCHEDULE_EXACT_ALARM tidak tersedia (Android 12+), plugin melempar
+  /// PlatformException — kita turunkan ke mode inexact agar notifikasi tetap
+  /// terjadwal (meski tidak presisi ke detik) dan proses simpan tugas tidak
+  /// ikut gagal. Kegagalan penjadwalan tidak boleh menggagalkan simpan tugas.
+  Future<void> _zonedScheduleSafe({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime when,
+    required NotificationDetails details,
+    String? payload,
+    DateTimeComponents? matchDateTimeComponents,
+  }) async {
+    try {
+      await _plugin.zonedSchedule(
+        id,
+        title,
+        body,
+        when,
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: payload,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: matchDateTimeComponents,
+      );
+    } catch (_) {
+      // Fallback: mode inexact tidak butuh izin exact alarm.
+      try {
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          when,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          payload: payload,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: matchDateTimeComponents,
+        );
+      } catch (_) {
+        // Platform tanpa dukungan penjadwalan — abaikan, jangan sampai
+        // menggagalkan alur simpan tugas.
+      }
+    }
   }
 
   // Bug #8 Fix: Use larger range dan better hashing untuk prevent collision

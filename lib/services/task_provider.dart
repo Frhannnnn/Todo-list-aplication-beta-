@@ -706,14 +706,20 @@ class TaskProvider with ChangeNotifier {
     _recalculateSAW();
     await _runScheduler();
     final saved = await _saveTasks();
+    // Penjadwalan notifikasi bersifat best-effort — kegagalannya tidak boleh
+    // menggagalkan simpan tugas (mis. izin exact alarm tidak tersedia).
     if (_notifEnabled) {
-      await _notifService.scheduleTaskNotifications(task);
-      if (_dailyReminderEnabled) {
-        await _notifService.scheduleDailyReminder(
-          hour: _dailyReminderHour,
-          minute: _dailyReminderMinute,
-          activeTasks: tugasAktif,
-        );
+      try {
+        await _notifService.scheduleTaskNotifications(task);
+        if (_dailyReminderEnabled) {
+          await _notifService.scheduleDailyReminder(
+            hour: _dailyReminderHour,
+            minute: _dailyReminderMinute,
+            activeTasks: tugasAktif,
+          );
+        }
+      } catch (e) {
+        debugPrint('Gagal menjadwalkan notifikasi tugas: $e');
       }
     }
     notifyListeners();
@@ -729,7 +735,11 @@ class TaskProvider with ChangeNotifier {
     await _runScheduler();
     final saved = await _saveTasks();
     if (_notifEnabled) {
-      await _notifService.scheduleTaskNotifications(task);
+      try {
+        await _notifService.scheduleTaskNotifications(task);
+      } catch (e) {
+        debugPrint('Gagal menjadwalkan notifikasi tugas: $e');
+      }
     }
     notifyListeners();
     return saved;
@@ -866,16 +876,20 @@ class TaskProvider with ChangeNotifier {
     await _runScheduler();
     final saved = await _saveTasks();
     if (_notifEnabled) {
-      await _notifService.scheduleTaskNotifications(base);
-      if (spawned != null) {
-        await _notifService.scheduleTaskNotifications(spawned);
-        if (_dailyReminderEnabled) {
-          await _notifService.scheduleDailyReminder(
-            hour: _dailyReminderHour,
-            minute: _dailyReminderMinute,
-            activeTasks: tugasAktif,
-          );
+      try {
+        await _notifService.scheduleTaskNotifications(base);
+        if (spawned != null) {
+          await _notifService.scheduleTaskNotifications(spawned);
+          if (_dailyReminderEnabled) {
+            await _notifService.scheduleDailyReminder(
+              hour: _dailyReminderHour,
+              minute: _dailyReminderMinute,
+              activeTasks: tugasAktif,
+            );
+          }
         }
+      } catch (e) {
+        debugPrint('Gagal menjadwalkan notifikasi tugas: $e');
       }
     }
     notifyListeners();
