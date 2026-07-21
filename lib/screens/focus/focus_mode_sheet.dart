@@ -107,8 +107,12 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
             ] else ...[
               const Text('Preset', style: _sectionLabel),
               const SizedBox(height: 8),
-              ...kFocusPresets.map(_presetTile),
-              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: kFocusPresets.map(_presetChip).toList(),
+              ),
+              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -168,45 +172,40 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
     );
   }
 
-  Widget _presetTile(FocusPreset preset) {
+  Widget _presetChip(FocusPreset preset) {
     final selected = _preset.name == preset.name;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        onTap: () => setState(() => _preset = preset),
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          decoration: BoxDecoration(
-            color: selected
-                ? AppTheme.primary.withValues(alpha: 0.08)
-                : Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-                color: selected ? AppTheme.primary : AppTheme.border,
-                width: selected ? 1.5 : 1),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                  selected
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                  color: selected ? AppTheme.primary : AppTheme.textSecondary,
-                  size: 20),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(preset.name,
-                    style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.textPrimary)),
-              ),
-              Text('${preset.focusMinutes} / ${preset.breakMinutes} menit',
-                  style: const TextStyle(
-                      fontSize: 12, color: AppTheme.textSecondary)),
-            ],
-          ),
+    return InkWell(
+      onTap: () => setState(() => _preset = preset),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppTheme.primary.withValues(alpha: 0.1)
+              : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: selected ? AppTheme.primary : AppTheme.border,
+              width: selected ? 1.5 : 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(preset.name,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        selected ? AppTheme.primary : AppTheme.textPrimary)),
+            const SizedBox(height: 2),
+            Text('${preset.focusMinutes}/${preset.breakMinutes} mnt',
+                style: TextStyle(
+                    fontSize: 11,
+                    color: selected
+                        ? AppTheme.primary.withValues(alpha: 0.8)
+                        : AppTheme.textSecondary)),
+          ],
         ),
       ),
     );
