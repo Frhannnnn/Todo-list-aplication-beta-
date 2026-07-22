@@ -7,6 +7,7 @@ import '../services/task_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/recurrence.dart';
 import '../widgets/task_card_widget.dart';
+import '../main.dart';
 import 'add_edit_task_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -35,14 +36,13 @@ class DashboardScreen extends StatelessWidget {
                         const SizedBox(height: 16),
                         _buildTaskCalendar(provider),
                         const SizedBox(height: 24),
-                        _buildSectionTitle('Tugas Mendatang'),
+                        _buildSectionHeader(
+                          'Prioritas Teratas',
+                          onSeeAll: () => MainNavigation.tabIndex.value =
+                              MainNavigation.taskListTab,
+                        ),
                         const SizedBox(height: 10),
-                        _buildUpcomingTasks(provider),
-                        const SizedBox(height: 24),
-                        _buildSectionTitle('Lingkup Tugas Aktif'),
-                        const SizedBox(height: 10),
-                        _buildCourseCards(provider),
-                        _buildMataKuliahSection(provider),
+                        _buildTopPriorityTasks(provider),
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -349,23 +349,61 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: AppTheme.textPrimary,
-      ),
+  /// Judul section dengan aksi "Lihat Semua" opsional di kanan.
+  Widget _buildSectionHeader(String title, {VoidCallback? onSeeAll}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        if (onSeeAll != null)
+          InkWell(
+            onTap: onSeeAll,
+            borderRadius: BorderRadius.circular(20),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Lihat Semua',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                  SizedBox(width: 2),
+                  Icon(Icons.chevron_right, size: 16, color: AppTheme.primary),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
   }
 
-  Widget _buildUpcomingTasks(TaskProvider provider) {
+  /// Tiga tugas paling prioritas (peringkat SAW terkecil). Ini inti nilai
+  /// aplikasi: pengguna langsung tahu apa yang harus dikerjakan lebih dulu.
+  Widget _buildTopPriorityTasks(TaskProvider provider) {
     final tasks = List.of(provider.activeTasks)
-      ..sort((a, b) => a.deadline.compareTo(b.deadline));
+      ..sort((a, b) {
+        if (a.ranking == 0 && b.ranking == 0) {
+          return a.deadline.compareTo(b.deadline);
+        }
+        if (a.ranking == 0) return 1;
+        if (b.ranking == 0) return -1;
+        return a.ranking.compareTo(b.ranking);
+      });
 
     if (tasks.isEmpty) {
-      return _buildEmptyState('Tidak ada tugas mendatang 🎉');
+      return _buildEmptyState('Belum ada tugas aktif 🎉');
     }
 
     return Builder(
@@ -383,214 +421,6 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 ))
             .toList(),
-      ),
-    );
-  }
-
-  Widget _buildCourseCards(TaskProvider provider) {
-    // Group tasks by lingkupTugas
-    final scopeMap = <String, List<dynamic>>{};
-    for (final task in provider.activeTasks) {
-      scopeMap.putIfAbsent(task.lingkupTugas, () => []).add(task);
-    }
-
-    if (scopeMap.isEmpty) {
-      return _buildEmptyState('Belum ada lingkup tugas aktif');
-    }
-
-    final scopes = scopeMap.entries.take(4).toList();
-
-    return SizedBox(
-      height: 130,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: scopes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final entry = scopes[index];
-          final taskCount = entry.value.length;
-          final completedInScope = provider.tasks
-              .where((t) =>
-                  t.lingkupTugas == entry.key &&
-                  t.status == TaskStatus.selesai)
-              .length;
-          final totalInScope = provider.tasks
-              .where((t) => t.lingkupTugas == entry.key)
-              .length;
-          final progress =
-              totalInScope > 0 ? completedInScope / totalInScope : 0.0;
-
-          final colors = [
-            AppTheme.primary,
-            AppTheme.accent,
-            AppTheme.warning,
-            AppTheme.danger,
-          ];
-          final color = colors[index % colors.length];
-
-          return Container(
-            width: 140,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: color.withValues(alpha: 0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.label_rounded, color: color, size: 20),
-                ),
-                const Spacer(),
-                Text(
-                  entry.key,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$taskCount Tugas',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor: color.withValues(alpha: 0.15),
-                          valueColor: AlwaysStoppedAnimation(color),
-                          minHeight: 4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${(progress * 100).round()}%',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  /// Ringkasan tugas per mata kuliah (Issue #2). Hanya tugas berlingkup
-  /// "Perkuliahan" yang mengisi mata kuliah yang dihitung di sini.
-  Widget _buildMataKuliahSection(TaskProvider provider) {
-    final matkulMap = <String, List<Task>>{};
-    for (final task in provider.tasks) {
-      final matkul = task.mataKuliah?.trim();
-      if (task.lingkupTugas == 'Perkuliahan' &&
-          matkul != null &&
-          matkul.isNotEmpty) {
-        matkulMap.putIfAbsent(matkul, () => []).add(task);
-      }
-    }
-
-    if (matkulMap.isEmpty) return const SizedBox.shrink();
-
-    final entries = matkulMap.entries.toList()
-      ..sort((a, b) => b.value.length.compareTo(a.value.length));
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionTitle('Ringkasan Mata Kuliah'),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.border),
-            ),
-            child: Column(
-              children: entries.map((entry) {
-                final tasks = entry.value;
-                final selesai = tasks
-                    .where((t) => t.status == TaskStatus.selesai)
-                    .length;
-                final totalMenit =
-                    tasks.fold<int>(0, (sum, t) => sum + t.totalFocusMinutes);
-                final subtitle = totalMenit > 0
-                    ? '${tasks.length} tugas • $selesai selesai • ${(totalMenit / 60).toStringAsFixed(1)} jam fokus'
-                    : '${tasks.length} tugas • $selesai selesai';
-
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.menu_book_rounded,
-                            color: AppTheme.primary, size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.key,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
       ),
     );
   }
