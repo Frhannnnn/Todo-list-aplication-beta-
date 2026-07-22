@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/task_provider.dart';
 import '../services/focus_session_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_assets.dart';
 import 'notification_settings_screen.dart';
 import 'focus/focus_history_screen.dart';
 
@@ -23,7 +24,7 @@ class SettingsScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
           children: [
             const Text(
-              'Pengaturan',
+              'Profil',
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
@@ -143,11 +144,18 @@ class SettingsScreen extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(
-              child: Text('👨‍🎓', style: TextStyle(fontSize: 28)),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Image.asset(
+                AppAssets.logo,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Center(
+                  child: Text('📘', style: TextStyle(fontSize: 26)),
+                ),
+              ),
             ),
           ),
           const SizedBox(width: 16),
