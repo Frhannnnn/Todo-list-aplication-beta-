@@ -162,13 +162,13 @@ class SettingsScreen extends StatelessWidget {
           const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('TugasKu',
+              Text('Priora',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       color: Colors.white)),
               SizedBox(height: 2),
-              Text('Manajemen Tugas Mahasiswa',
+              Text('Prioritaskan & selesaikan tugasmu',
                   style: TextStyle(color: Colors.white70, fontSize: 12)),
               SizedBox(height: 4),
               Text('Versi 1.0.0',
@@ -326,7 +326,7 @@ class SettingsScreen extends StatelessWidget {
         mimeType: 'application/json',
         name: 'tugasku_backup_$timestamp.json',
       );
-      await Share.shareXFiles([file], text: 'Cadangan data TugasKu');
+      await Share.shareXFiles([file], text: 'Cadangan data Priora');
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -366,7 +366,7 @@ class SettingsScreen extends StatelessWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('File bukan cadangan TugasKu yang valid'),
+                content: Text('File bukan cadangan Priora yang valid'),
                 backgroundColor: AppTheme.danger),
           );
         }

@@ -315,7 +315,7 @@ class NotificationService {
     await _zonedScheduleSafe(
       id: 9999,
       title: '📚 Selamat Pagi!',
-      body: 'Kamu punya $activeTasks tugas yang belum selesai. Yuk cek TugasKu!',
+      body: 'Kamu punya $activeTasks tugas yang belum selesai. Yuk cek Priora!',
       when: scheduledDate,
       details: const NotificationDetails(
         android: AndroidNotificationDetails(

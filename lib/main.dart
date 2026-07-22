@@ -41,7 +41,7 @@ class TugasKuApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FocusSessionProvider()),
       ],
       child: MaterialApp(
-        title: 'TugasKu',
+        title: 'Priora',
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: rootScaffoldMessengerKey,
         theme: AppTheme.theme,

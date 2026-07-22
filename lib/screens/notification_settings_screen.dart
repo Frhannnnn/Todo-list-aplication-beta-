@@ -92,7 +92,7 @@ class _NotificationSettingsScreenState
           ),
           const SizedBox(height: 8),
           const Text(
-            'Izinkan TugasKu mengirim notifikasi agar kamu tidak pernah melewatkan deadline!',
+            'Izinkan Priora mengirim notifikasi agar kamu tidak pernah melewatkan deadline!',
             style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
           ),
           const SizedBox(height: 12),
