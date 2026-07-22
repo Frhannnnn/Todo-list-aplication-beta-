@@ -170,7 +170,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                     _buildSection('Status', [_buildStatusSelector()]),
                   ],
                   const SizedBox(height: 16),
-                  _buildSection('Notifikasi', [_buildNotifToggle()]),
+                  _buildSection('Notifikasi', [
+                    _buildNotifToggle(provider.notifEnabled),
+                  ]),
                   const SizedBox(height: 16),
                   _buildSection('Catatan', [_buildCatatanField()]),
                 ],
@@ -626,15 +628,42 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
-  /// Notifikasi cukup satu sakelar. Jadwal pengingat memakai default
-  /// (H-1, 3 jam sebelum, tepat deadline) tanpa perlu diatur pengguna.
-  Widget _buildNotifToggle() {
+  /// Sakelar notifikasi khusus tugas ini. Ini bawahan dari sakelar global di
+  /// Profil → Notifikasi: kalau global mati ([globalEnabled] false), notifikasi
+  /// tugas apa pun tidak dikirim, jadi sakelar per-tugas dinonaktifkan agar
+  /// tidak berbenturan/menyesatkan. Jadwal pengingat memakai default (H-1,
+  /// 3 jam sebelum, tepat deadline).
+  Widget _buildNotifToggle(bool globalEnabled) {
+    if (!globalEnabled) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.warning.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.notifications_off_rounded,
+                color: AppTheme.warning, size: 18),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Notifikasi dimatikan untuk semua tugas di Profil → Notifikasi. '
+                'Aktifkan di sana dulu untuk mengatur notifikasi per tugas.',
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
     return SwitchListTile(
       value: _notifEnabled,
       onChanged: (v) => setState(() => _notifEnabled = v),
       activeThumbColor: AppTheme.primary,
       contentPadding: EdgeInsets.zero,
-      title: const Text('Aktifkan Notifikasi',
+      title: const Text('Notifikasi tugas ini',
           style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -642,7 +671,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       subtitle: Text(
         _notifEnabled
             ? 'Pengingat H-1, 3 jam sebelum, & tepat deadline'
-            : 'Notifikasi dimatikan untuk tugas ini',
+            : 'Notifikasi dimatikan untuk tugas ini saja',
         style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
       ),
     );

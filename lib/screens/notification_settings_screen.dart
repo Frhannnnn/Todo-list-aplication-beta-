@@ -138,12 +138,12 @@ class _NotificationSettingsScreenState
             await _loadPendingCount();
           },
           activeThumbColor: AppTheme.primary,
-          title: const Text('Aktifkan Notifikasi',
+          title: const Text('Aktifkan Notifikasi (semua tugas)',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
           subtitle: Text(
               provider.notifEnabled
-                  ? 'Notifikasi deadline aktif'
-                  : 'Semua notifikasi dimatikan',
+                  ? 'Sakelar utama aktif. Atur per tugas di form Tambah/Edit.'
+                  : 'Semua notifikasi tugas dimatikan',
               style:
                   const TextStyle(fontSize: 12, color: AppTheme.textSecondary)),
           contentPadding: EdgeInsets.zero,
