@@ -42,11 +42,13 @@ class DashboardScreen extends StatelessWidget {
                         const SizedBox(height: 24),
                         _buildSectionHeader(
                           'Prioritas Teratas',
-                          onSeeAll: () => MainNavigation.tabIndex.value =
-                              MainNavigation.taskListTab,
+                          onSeeAll: provider.tasks.isEmpty
+                              ? null
+                              : () => MainNavigation.tabIndex.value =
+                                  MainNavigation.taskListTab,
                         ),
                         const SizedBox(height: 10),
-                        _buildTopPriorityTasks(provider),
+                        _buildTopPriorityTasks(context, provider),
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -518,28 +520,88 @@ class DashboardScreen extends StatelessWidget {
 
   /// Tiga tugas paling prioritas (peringkat SAW terkecil). Ini inti nilai
   /// aplikasi: pengguna langsung tahu apa yang harus dikerjakan lebih dulu.
-  Widget _buildTopPriorityTasks(TaskProvider provider) {
+  Widget _buildTopPriorityTasks(BuildContext context, TaskProvider provider) {
     final tasks = _activeByPriority(provider);
 
     if (tasks.isEmpty) {
-      return _buildEmptyState('Belum ada tugas aktif 🎉');
+      // First-run (belum pernah ada tugas): tuntun buat tugas pertama langsung
+      // dari Dashboard, karena inilah layar yang pertama dilihat pengguna.
+      if (provider.tasks.isEmpty) {
+        return _buildOnboardingCard(context);
+      }
+      // Ada tugas tapi semua selesai — beri apresiasi.
+      return _buildEmptyState('Semua tugas selesai 🎉');
     }
 
-    return Builder(
-      builder: (context) => Column(
-        children: tasks
-            .take(3)
-            .map((t) => TaskCardWidget(
-                  task: t,
-                  showRanking: false,
-                  totalActiveTasks: provider.activeTasks.length,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => AddEditTaskScreen(task: t)),
-                  ),
-                ))
-            .toList(),
+    return Column(
+      children: tasks
+          .take(3)
+          .map((t) => TaskCardWidget(
+                task: t,
+                showRanking: false,
+                totalActiveTasks: provider.activeTasks.length,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => AddEditTaskScreen(task: t)),
+                ),
+              ))
+          .toList(),
+    );
+  }
+
+  /// Kartu penuntun untuk pengguna baru di Dashboard: jelas apa yang harus
+  /// dilakukan pertama kali (buat tugas), tanpa harus menebak-nebak tab mana.
+  Widget _buildOnboardingCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          Image.asset(
+            AppAssets.emptyTasks,
+            width: 140,
+            height: 105,
+            errorBuilder: (_, __, ___) =>
+                const Text('📝', style: TextStyle(fontSize: 36)),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Mulai dari sini 👇',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Tambahkan tugas pertamamu, lalu Priora otomatis menyusun mana yang harus dikerjakan lebih dulu.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
+              ),
+              icon: const Icon(Icons.add, size: 20),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              label: const Text('Buat Tugas Pertama',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ),
+        ],
       ),
     );
   }
