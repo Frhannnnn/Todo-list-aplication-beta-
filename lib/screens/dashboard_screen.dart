@@ -8,6 +8,7 @@ import '../utils/app_theme.dart';
 import '../utils/recurrence.dart';
 import '../widgets/task_card_widget.dart';
 import '../utils/task_status_actions.dart';
+import '../utils/app_assets.dart';
 import '../main.dart';
 import 'add_edit_task_screen.dart';
 
@@ -64,14 +65,26 @@ class DashboardScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const SizedBox(width: 40, height: 40),
-          const Text(
-            'Tugas',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
-            ),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Halo 👋',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              SizedBox(height: 2),
+              Text(
+                'Ringkasan hari ini',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
           ),
           GestureDetector(
             onTap: () => Navigator.push(
@@ -530,7 +543,7 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildEmptyState(String message) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -538,9 +551,16 @@ class DashboardScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text('📭', style: TextStyle(fontSize: 36)),
-          const SizedBox(height: 8),
+          Image.asset(
+            AppAssets.emptyTasks,
+            width: 120,
+            height: 90,
+            errorBuilder: (_, __, ___) =>
+                const Text('📭', style: TextStyle(fontSize: 36)),
+          ),
+          const SizedBox(height: 10),
           Text(message,
+              textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
         ],
       ),
