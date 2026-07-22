@@ -331,59 +331,59 @@ class DashboardScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 6),
+                      // Lingkaran simetris untuk tanggal.
                       Container(
-                        height: 44,
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
+                          shape: BoxShape.circle,
                           color: isToday
                               ? AppTheme.primary
                               : hasTask
                                   ? AppTheme.primary.withValues(alpha: 0.08)
                                   : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '${date.day}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: isToday || hasTask
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                color: isToday
-                                    ? Colors.white
-                                    : AppTheme.textPrimary,
-                              ),
-                            ),
-                            if (hasTask) ...[
-                              const SizedBox(height: 3),
-                              Container(
+                        child: Text(
+                          '${date.day}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isToday || hasTask
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isToday
+                                ? Colors.white
+                                : AppTheme.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      // Penanda tugas/occurrence di bawah lingkaran; slot tetap
+                      // agar semua tanggal sejajar.
+                      SizedBox(
+                        height: 6,
+                        child: hasTask
+                            ? Container(
                                 width: 5,
                                 height: 5,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: isToday
-                                      ? Colors.white
-                                      : hasOverdue
-                                          ? AppTheme.danger
-                                          : AppTheme.primary,
+                                  color: hasOverdue
+                                      ? AppTheme.danger
+                                      : AppTheme.primary,
                                 ),
-                              ),
-                            ] else if (!isToday && hasPreview) ...[
-                              const SizedBox(height: 3),
-                              Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                      color: AppTheme.primary, width: 1.2),
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
+                              )
+                            : (hasPreview
+                                ? Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: AppTheme.primary, width: 1.2),
+                                    ),
+                                  )
+                                : null),
                       ),
                     ],
                   ),
