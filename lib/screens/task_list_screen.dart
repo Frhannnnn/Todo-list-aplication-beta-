@@ -372,35 +372,159 @@ class _TaskListScreenState extends State<TaskListScreen> {
     final totalActiveTasks = provider.activeTasks.length;
     tasks = _applyFilterAndSort(tasks, totalActiveTasks);
 
+    Widget child;
     if (tasks.isEmpty && _filterPrioritas != 'Semua') {
-      return _buildEmptyFilterState(_filterPrioritas);
+      child = _scrollableCenter(_buildEmptyFilterState(_filterPrioritas));
+    } else if (tasks.isEmpty) {
+      child = _scrollableCenter(_buildEmptyState(context));
+    } else {
+      child = ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+        itemCount: tasks.length,
+        itemBuilder: (context, index) {
+          final task = tasks[index];
+          return Dismissible(
+            key: ValueKey(task.id),
+            background: _swipeBackground(
+              alignment: Alignment.centerLeft,
+              color: AppTheme.success,
+              icon: Icons.check_rounded,
+              label: 'Selesai',
+            ),
+            secondaryBackground: _swipeBackground(
+              alignment: Alignment.centerRight,
+              color: AppTheme.danger,
+              icon: Icons.delete_outline_rounded,
+              label: 'Hapus',
+            ),
+            confirmDismiss: (direction) async {
+              if (direction == DismissDirection.startToEnd) {
+                // Geser kanan → tandai selesai (tidak menghapus dari daftar).
+                if (task.status != TaskStatus.selesai) {
+                  handleStatusChange(
+                      context, provider, task, TaskStatus.selesai);
+                }
+                return false;
+              }
+              // Geser kiri → konfirmasi hapus.
+              return _confirmDeleteDialog(context, task);
+            },
+            onDismissed: (_) => _deleteWithUndo(context, provider, task),
+            child: TaskCardWidget(
+              task: task,
+              // Rank numerik (#N) redundan dengan label prioritas (Tinggi/
+              // Sedang/Rendah) di kartu — biarkan #N khusus di layar Prioritas.
+              showRanking: false,
+              totalActiveTasks: totalActiveTasks,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => AddEditTaskScreen(task: task)),
+              ),
+              onDelete: () => _confirmDelete(context, provider, task),
+              onStatusChange: (status) =>
+                  handleStatusChange(context, provider, task, status),
+            ),
+          );
+        },
+      );
     }
 
-    if (tasks.isEmpty) {
-      return _buildEmptyState();
-    }
+    return RefreshIndicator(
+      color: AppTheme.primary,
+      onRefresh: () => provider.refresh(),
+      child: child,
+    );
+  }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-      itemCount: tasks.length,
-      itemBuilder: (context, index) {
-        final task = tasks[index];
-        return TaskCardWidget(
-          task: task,
-          // Rank numerik (#N) redundan dengan label prioritas (Tinggi/Sedang/
-          // Rendah) di kartu — biarkan #N khusus di layar Prioritas.
-          showRanking: false,
-          totalActiveTasks: totalActiveTasks,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => AddEditTaskScreen(task: task)),
+  /// Bungkus konten kosong agar tetap bisa di-pull-to-refresh.
+  Widget _scrollableCenter(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) => ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: constraints.maxHeight,
+            child: Center(child: child),
           ),
-          onDelete: () => _confirmDelete(context, provider, task),
-          onStatusChange: (status) =>
-              handleStatusChange(context, provider, task, status),
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  Widget _swipeBackground({
+    required Alignment alignment,
+    required Color color,
+    required IconData icon,
+    required String label,
+  }) {
+    final left = alignment == Alignment.centerLeft;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      alignment: alignment,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (left) Icon(icon, color: color, size: 22),
+          if (left) const SizedBox(width: 8),
+          Text(label,
+              style: TextStyle(
+                  color: color, fontWeight: FontWeight.w700, fontSize: 14)),
+          if (!left) const SizedBox(width: 8),
+          if (!left) Icon(icon, color: color, size: 22),
+        ],
+      ),
+    );
+  }
+
+  Future<bool> _confirmDeleteDialog(BuildContext ctx, Task task) async {
+    final result = await showDialog<bool>(
+      context: ctx,
+      builder: (context) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Hapus Tugas'),
+        content: Text('Hapus "${task.namaTugas}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _deleteWithUndo(
+      BuildContext ctx, TaskProvider provider, Task task) async {
+    final deleted = await provider.hapusTugas(task.id);
+    if (!ctx.mounted) return;
+    ScaffoldMessenger.of(ctx).showSnackBar(
+      SnackBar(
+        content: Text(deleted
+            ? 'Tugas berhasil dihapus'
+            : 'Gagal menghapus — coba lagi'),
+        backgroundColor: AppTheme.danger,
+        action: deleted
+            ? SnackBarAction(
+                label: 'Urungkan',
+                textColor: Colors.white,
+                onPressed: () => provider.restoreTugas(task),
+              )
+            : null,
+      ),
     );
   }
 
@@ -491,28 +615,47 @@ class _TaskListScreenState extends State<TaskListScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(AppAssets.emptyTasks, width: 160, height: 120),
-          const SizedBox(height: 20),
-          const Text(
-            'Belum ada tugas',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(AppAssets.emptyTasks, width: 160, height: 120),
+            const SizedBox(height: 20),
+            const Text(
+              'Selamat datang di Priora 👋',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Tap tombol + untuk menambah tugas baru',
-            style:
-                TextStyle(color: AppTheme.textSecondary, fontSize: 14),
-          ),
-        ],
+            const SizedBox(height: 8),
+            const Text(
+              'Tambahkan tugas pertamamu, lalu Priora akan mengurutkan mana yang harus dikerjakan lebih dulu.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AddEditTaskScreen()),
+              ),
+              icon: const Icon(Icons.add, size: 20),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 22, vertical: 14),
+              ),
+              label: const Text('Buat Tugas Pertama',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
       ),
     );
   }

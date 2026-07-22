@@ -8,6 +8,7 @@ import '../screens/focus/focus_mode_sheet.dart';
 import '../screens/focus/focus_intent_dialog.dart';
 import '../screens/focus/focus_preparation_screen.dart';
 import 'app_theme.dart';
+import 'celebration.dart';
 import 'focus_recommendation.dart';
 
 /// Terapkan perubahan status tugas dari kartu tugas (tombol "Mulai" /
@@ -24,6 +25,9 @@ void handleStatusChange(
 
   if (newStatus == TaskStatus.sedangDikerjakan) {
     _startFocusFlow(context, provider, task);
+  } else if (newStatus == TaskStatus.selesai) {
+    // Rayakan penyelesaian: getar + animasi centang singkat.
+    celebrateTaskCompletion(context);
   }
 }
 

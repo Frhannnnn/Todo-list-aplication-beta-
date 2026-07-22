@@ -403,6 +403,10 @@ class TaskProvider with ChangeNotifier {
   // TASKS CRUD
   // ─────────────────────────────────────────────
 
+  /// Muat ulang data dari penyimpanan & hitung ulang peringkat SAW.
+  /// Dipakai untuk pull-to-refresh pada daftar tugas.
+  Future<void> refresh() => _loadTasks();
+
   // Bug #5 Fix: Add try-catch and backup mechanism for JSON corruption
   Future<void> _loadTasks() async {
     final prefs = await SharedPreferences.getInstance();

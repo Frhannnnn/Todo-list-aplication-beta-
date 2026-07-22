@@ -1,6 +1,7 @@
 // lib/screens/dashboard_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import '../services/task_provider.dart';
@@ -459,8 +460,11 @@ class DashboardScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: GestureDetector(
-        onTap: () => handleStatusChange(
-            context, provider, top, TaskStatus.sedangDikerjakan),
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          handleStatusChange(
+              context, provider, top, TaskStatus.sedangDikerjakan);
+        },
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
