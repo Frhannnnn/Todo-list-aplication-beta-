@@ -7,7 +7,6 @@ import '../services/task_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/recurrence.dart';
 import '../widgets/task_card_widget.dart';
-import '../main.dart';
 import 'add_edit_task_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -29,17 +28,19 @@ class DashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 20),
+                            const SizedBox(height: 16),
                         _buildSummaryCard(provider),
+                        const SizedBox(height: 12),
+                        _buildHariIniRow(provider),
+                        const SizedBox(height: 16),
+                        _buildTaskCalendar(provider),
                         const SizedBox(height: 24),
-                        _buildProgressAndCalendar(provider),
-                        const SizedBox(height: 28),
                         _buildSectionTitle('Tugas Mendatang'),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         _buildUpcomingTasks(provider),
-                        const SizedBox(height: 28),
+                        const SizedBox(height: 24),
                         _buildSectionTitle('Lingkup Tugas Aktif'),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         _buildCourseCards(provider),
                         _buildMataKuliahSection(provider),
                         const SizedBox(height: 100),
@@ -167,169 +168,43 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressAndCalendar(TaskProvider provider) {
+  Widget _buildHariIniRow(TaskProvider provider) {
     final total = provider.totalTugas;
     final selesai = provider.tugasSelesai;
-    final pct = total > 0 ? (selesai / total * 100).round() : 0;
-
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-        // Circular progress
-        Expanded(
-          flex: 4,
-          child: Column(
-            children: [
-              const Text(
-                'PROGRES MINGGUAN',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textSecondary,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final size =
-                      constraints.maxWidth < 120 ? constraints.maxWidth : 120.0;
-                  return SizedBox(
-                    width: size,
-                    height: size,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: size,
-                          height: size,
-                          child: CircularProgressIndicator(
-                            value: total > 0 ? selesai / total : 0,
-                            strokeWidth: 10,
-                            backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
-                            valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
-                            strokeCap: StrokeCap.round,
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.assignment_turned_in_outlined,
-                                color: AppTheme.primary, size: 22),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$pct%',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            const Text(
-                              'Selesai',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 16),
-        // Streak motivasi
-        Expanded(
-          flex: 5,
-          child: _buildStreakCard(provider),
-        ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        _buildTaskCalendar(provider),
-      ],
-    );
-  }
-
-  Widget _buildStreakCard(TaskProvider provider) {
     final streak = provider.currentStreak;
-    final selesai = provider.tugasSelesai;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.warning.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.25)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          const Row(
-            children: [
-              Icon(Icons.local_fire_department_rounded,
-                  color: AppTheme.warning, size: 22),
-              SizedBox(width: 6),
-              Text(
-                'Streak',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$streak',
-                style: const TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.warning,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Padding(
-                padding: EdgeInsets.only(bottom: 5),
-                child: Text(
-                  'hari',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+          const Icon(Icons.check_circle_outline_rounded,
+              color: AppTheme.primary, size: 18),
+          const SizedBox(width: 6),
           Text(
-            streak == 0
-                ? 'Selesaikan 1 tugas hari ini untuk memulai!'
-                : 'Beruntun! Pertahankan ya 🔥',
+            '$selesai/$total selesai',
             style: const TextStyle(
-              fontSize: 11,
-              color: AppTheme.textSecondary,
-              height: 1.3,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(width: 16),
+          Container(width: 1, height: 16, color: AppTheme.border),
+          const SizedBox(width: 16),
+          const Icon(Icons.local_fire_department_rounded,
+              color: AppTheme.warning, size: 18),
+          const SizedBox(width: 6),
           Text(
-            'Total selesai: $selesai',
+            '$streak hari',
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppTheme.textSecondary,
+              color: AppTheme.textPrimary,
             ),
           ),
         ],
@@ -375,42 +250,13 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Kalender Tugas',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              InkWell(
-                onTap: () =>
-                    MainNavigation.tabIndex.value = MainNavigation.calendarTab,
-                borderRadius: BorderRadius.circular(20),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Buka Kalender',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                      SizedBox(width: 2),
-                      Icon(Icons.chevron_right,
-                          size: 16, color: AppTheme.primary),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          const Text(
+            'Kalender Tugas',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.textPrimary,
+            ),
           ),
           const SizedBox(height: 12),
           Row(

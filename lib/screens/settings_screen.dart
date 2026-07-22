@@ -9,7 +9,6 @@ import '../services/task_provider.dart';
 import '../services/focus_session_provider.dart';
 import '../utils/app_theme.dart';
 import 'notification_settings_screen.dart';
-import 'schedule_settings_screen.dart';
 import 'focus/focus_history_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -39,8 +38,6 @@ class SettingsScreen extends StatelessWidget {
             _buildInfoCard(context),
             const SizedBox(height: 16),
             _buildNotifCard(context),
-            const SizedBox(height: 16),
-            _buildScheduleSettingsCard(context),
             const SizedBox(height: 16),
             _buildSAWInfoCard(),
             const SizedBox(height: 16),
@@ -233,66 +230,6 @@ class SettingsScreen extends StatelessWidget {
                           color: provider.notifEnabled
                               ? AppTheme.success
                               : AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: AppTheme.textSecondary),
-              ],
-            ),
-          ),
-        ),
-      ]);
-    });
-  }
-
-  Widget _buildScheduleSettingsCard(BuildContext context) {
-    return Consumer<TaskProvider>(builder: (ctx, provider, _) {
-      final config = provider.scheduleConfig;
-      final startStr =
-          '${config.workStartHour.toString().padLeft(2, '0')}:${config.workStartMinute.toString().padLeft(2, '0')}';
-      final endStr =
-          '${config.workEndHour.toString().padLeft(2, '0')}:${config.workEndMinute.toString().padLeft(2, '0')}';
-
-      return _buildCard('Penjadwalan', Icons.schedule_rounded, [
-        GestureDetector(
-          onTap: () => Navigator.push(
-            ctx,
-            MaterialPageRoute(builder: (_) => const ScheduleSettingsScreen()),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.access_time_rounded,
-                      color: AppTheme.primary, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Primary Work Hours',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
-                      Text(
-                        'Jam kerja: $startStr – $endStr',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
                         ),
                       ),
                     ],

@@ -10,9 +10,7 @@ import 'services/focus_session_provider.dart';
 import 'utils/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/task_list_screen.dart';
-import 'screens/calendar_screen.dart';
 import 'screens/priority_screen.dart';
-import 'screens/schedule_screen.dart';
 import 'screens/settings_screen.dart';
 
 /// Kunci global supaya SnackBar bisa ditampilkan dari layar mana pun,
@@ -62,7 +60,6 @@ class MainNavigation extends StatefulWidget {
 
   static const int dashboardTab = 0;
   static const int taskListTab = 1;
-  static const int calendarTab = 3;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -73,8 +70,6 @@ class _MainNavigationState extends State<MainNavigation>
   final List<Widget> _screens = const [
     DashboardScreen(),
     TaskListScreen(),
-    ScheduleScreen(),
-    CalendarScreen(),
     PriorityScreen(),
     SettingsScreen(),
   ];
@@ -148,10 +143,8 @@ class _MainNavigationState extends State<MainNavigation>
           children: [
             _navItem(0, Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
             _navItem(1, Icons.assignment_outlined, Icons.assignment, 'Tugas'),
-            _navItem(2, Icons.schedule_outlined, Icons.schedule, 'Jadwal'),
-            _navItem(3, Icons.calendar_month_outlined, Icons.calendar_month, 'Kalender'),
-            _navItem(4, Icons.psychology_outlined, Icons.psychology, 'Prioritas'),
-            _navItem(5, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
+            _navItem(2, Icons.psychology_outlined, Icons.psychology, 'Prioritas'),
+            _navItem(3, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
           ],
         ),
       ),
