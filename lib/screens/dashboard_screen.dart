@@ -7,6 +7,7 @@ import '../services/task_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/recurrence.dart';
 import '../widgets/task_card_widget.dart';
+import '../utils/task_status_actions.dart';
 import '../main.dart';
 import 'add_edit_task_screen.dart';
 
@@ -33,7 +34,8 @@ class DashboardScreen extends StatelessWidget {
                         _buildSummaryCard(provider),
                         const SizedBox(height: 12),
                         _buildHariIniRow(provider),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
+                        _buildFocusNowButton(context, provider),
                         _buildTaskCalendar(provider),
                         const SizedBox(height: 24),
                         _buildSectionHeader(
@@ -418,10 +420,11 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  /// Tiga tugas paling prioritas (peringkat SAW terkecil). Ini inti nilai
-  /// aplikasi: pengguna langsung tahu apa yang harus dikerjakan lebih dulu.
-  Widget _buildTopPriorityTasks(TaskProvider provider) {
-    final tasks = List.of(provider.activeTasks)
+  /// Tugas aktif terurut prioritas SAW (peringkat terkecil dulu; tugas tanpa
+  /// peringkat memakai deadline terdekat). Dipakai bersama oleh tombol
+  /// "Fokus Sekarang" dan daftar "Prioritas Teratas".
+  List<Task> _activeByPriority(TaskProvider provider) {
+    return List.of(provider.activeTasks)
       ..sort((a, b) {
         if (a.ranking == 0 && b.ranking == 0) {
           return a.deadline.compareTo(b.deadline);
@@ -430,6 +433,76 @@ class DashboardScreen extends StatelessWidget {
         if (b.ranking == 0) return -1;
         return a.ranking.compareTo(b.ranking);
       });
+  }
+
+  /// Aksi satu-ketuk: ambil tugas prioritas tertinggi lalu langsung buka alur
+  /// Focus Session untuknya — menyatukan prioritas SAW + fokus jadi satu aksi
+  /// tanpa pengguna perlu memilih tugas sendiri.
+  Widget _buildFocusNowButton(BuildContext context, TaskProvider provider) {
+    final tasks = _activeByPriority(provider);
+    if (tasks.isEmpty) return const SizedBox.shrink();
+    final top = tasks.first;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GestureDetector(
+        onTap: () => handleStatusChange(
+            context, provider, top, TaskStatus.sedangDikerjakan),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppTheme.primary, AppTheme.secondary],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.bolt_rounded,
+                    color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Fokus Sekarang',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                    const SizedBox(height: 2),
+                    Text('Mulai: ${top.namaTugas}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.white70)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.play_arrow_rounded,
+                  color: Colors.white, size: 28),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Tiga tugas paling prioritas (peringkat SAW terkecil). Ini inti nilai
+  /// aplikasi: pengguna langsung tahu apa yang harus dikerjakan lebih dulu.
+  Widget _buildTopPriorityTasks(TaskProvider provider) {
+    final tasks = _activeByPriority(provider);
 
     if (tasks.isEmpty) {
       return _buildEmptyState('Belum ada tugas aktif 🎉');
