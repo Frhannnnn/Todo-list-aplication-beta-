@@ -153,9 +153,10 @@ class SettingsScreen extends StatelessWidget {
               child: Image.asset(
                 AppAssets.logo,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Center(
-                  child: Text('📘', style: TextStyle(fontSize: 26)),
-                ),
+                errorBuilder: (_, __, ___) => const Icon(
+                    Icons.check_circle_rounded,
+                    size: 30,
+                    color: AppTheme.primary),
               ),
             ),
           ),

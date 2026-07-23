@@ -68,9 +68,6 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.textPrimary)),
-            const SizedBox(height: 4),
-            const Text('Pilih mode & durasi sesi fokusmu.',
-                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
             const SizedBox(height: 18),
             const Text('Mode', style: _sectionLabel),
             const SizedBox(height: 8),
@@ -97,9 +94,6 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
             ),
             const SizedBox(height: 20),
             if (_isCustom) ...[
-              const Text('Atur durasi, istirahat, dan jumlah siklus sendiri.',
-                  style: TextStyle(fontSize: 13, color: AppTheme.textSecondary)),
-              const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

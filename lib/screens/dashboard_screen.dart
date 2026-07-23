@@ -555,7 +555,7 @@ class DashboardScreen extends StatelessWidget {
         return _buildOnboardingCard(context);
       }
       // Ada tugas tapi semua selesai — beri apresiasi.
-      return _buildEmptyState('Semua tugas selesai 🎉');
+      return _buildEmptyState('Semua tugas selesai');
     }
 
     return Column(
@@ -592,12 +592,12 @@ class DashboardScreen extends StatelessWidget {
             AppAssets.emptyTasks,
             width: 140,
             height: 105,
-            errorBuilder: (_, __, ___) =>
-                const Text('📝', style: TextStyle(fontSize: 36)),
+            errorBuilder: (_, __, ___) => const Icon(Icons.assignment_outlined,
+                size: 44, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 14),
           const Text(
-            'Mulai dari sini 👇',
+            'Mulai dari sini',
             textAlign: TextAlign.center,
             style: TextStyle(
                 fontSize: 17,
@@ -646,8 +646,8 @@ class DashboardScreen extends StatelessWidget {
             AppAssets.emptyTasks,
             width: 120,
             height: 90,
-            errorBuilder: (_, __, ___) =>
-                const Text('📭', style: TextStyle(fontSize: 36)),
+            errorBuilder: (_, __, ___) => const Icon(Icons.inbox_outlined,
+                size: 40, color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 10),
           Text(message,

@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'app_theme.dart';
 
 /// Perayaan singkat saat sebuah tugas ditandai selesai: getar halus +
-/// overlay animasi (lingkaran centang + 🎉) yang muncul di tengah lalu
+/// overlay animasi (lingkaran centang) yang muncul di tengah lalu
 /// memudar sendiri. Sengaja tanpa dependency tambahan agar tetap ringan.
 void celebrateTaskCompletion(BuildContext context) {
   // Getar halus sebagai umpan balik taktil.
@@ -90,7 +90,7 @@ class _CelebrationOverlayState extends State<_CelebrationOverlay>
                           color: Colors.white, size: 56),
                     ),
                     const SizedBox(height: 12),
-                    const Text('🎉 Selesai!',
+                    const Text('Selesai!',
                         style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,

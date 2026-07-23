@@ -113,8 +113,8 @@ class _NotificationSettingsScreenState
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text(granted
-                        ? '✅ Izin diberikan!'
-                        : '❌ Izin ditolak. Aktifkan di Pengaturan HP.'),
+                        ? 'Izin diberikan!'
+                        : 'Izin ditolak. Aktifkan di Pengaturan HP.'),
                     backgroundColor:
                         granted ? AppTheme.success : AppTheme.danger,
                   ));
@@ -129,7 +129,7 @@ class _NotificationSettingsScreenState
 
   Widget _buildMainToggleCard(TaskProvider provider) {
     return _buildCard(
-      '🔔 Notifikasi Tugas',
+      'Notifikasi Tugas',
       [
         SwitchListTile(
           value: provider.notifEnabled,
@@ -153,7 +153,7 @@ class _NotificationSettingsScreenState
   }
 
   Widget _buildDeadlineNotifCard() {
-    return _buildCard('📅 Notifikasi Deadline', [
+    return _buildCard('Notifikasi Deadline', [
       _buildNotifRow(
         icon: Icons.notifications,
         iconColor: AppTheme.success,
@@ -274,7 +274,7 @@ class _NotificationSettingsScreenState
   }
 
   Widget _buildStatusCard() {
-    return _buildCard('📊 Status Notifikasi', [
+    return _buildCard('Status Notifikasi', [
       Row(
         children: [
           Container(
@@ -311,25 +311,29 @@ class _NotificationSettingsScreenState
   }
 
   Widget _buildLegendCard() {
-    return _buildCard('ℹ️ Cara Kerja Notifikasi', [
+    return _buildCard('Cara Kerja Notifikasi', [
       const Text(
         'Notifikasi dijadwalkan secara otomatis saat kamu menambah atau mengedit tugas. Notifikasi akan dikirim berdasarkan deadline yang kamu set.',
         style:
             TextStyle(fontSize: 12, color: AppTheme.textSecondary, height: 1.5),
       ),
       const SizedBox(height: 10),
-      _buildTip('💡', 'Notifikasi tetap berfungsi saat aplikasi ditutup'),
-      _buildTip('📱', 'Pastikan mode hemat baterai tidak memblokir notifikasi'),
-      _buildTip('🔕', 'Notifikasi tugas yang selesai akan otomatis dibatalkan'),
+      _buildTip('Notifikasi tetap berfungsi saat aplikasi ditutup'),
+      _buildTip('Pastikan mode hemat baterai tidak memblokir notifikasi'),
+      _buildTip('Notifikasi tugas yang selesai akan otomatis dibatalkan'),
     ]);
   }
 
-  Widget _buildTip(String emoji, String text) {
+  Widget _buildTip(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 14)),
+          const Padding(
+            padding: EdgeInsets.only(top: 5),
+            child: Icon(Icons.circle, size: 5, color: AppTheme.textSecondary),
+          ),
           const SizedBox(width: 8),
           Expanded(
               child: Text(text,

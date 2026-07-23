@@ -223,7 +223,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                                 if (session.targetText != null) ...[
                                   const SizedBox(height: 2),
                                   Text(
-                                    '🎯 ${session.targetText}',
+                                    session.targetText!,
                                     textAlign: TextAlign.center,
                                     style: const TextStyle(
                                         fontSize: 13,
@@ -365,7 +365,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
 
   Widget _streakLabel(int streak) {
     return Text(
-      streak > 0 ? '🔥 $streak Hari Fokus' : '🔥 Mulai streak fokusmu',
+      streak > 0 ? '$streak Hari Fokus' : 'Mulai streak fokusmu',
       style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
     );
   }

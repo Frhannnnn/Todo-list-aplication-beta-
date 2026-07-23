@@ -663,7 +663,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
             Image.asset(AppAssets.emptyTasks, width: 160, height: 120),
             const SizedBox(height: 20),
             const Text(
-              'Selamat datang di Priora 👋',
+              'Selamat datang di Priora',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
