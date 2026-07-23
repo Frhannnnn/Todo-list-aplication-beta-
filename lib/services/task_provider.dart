@@ -938,11 +938,20 @@ class TaskProvider with ChangeNotifier {
     await editTugas(id, status: status);
   }
 
-  Future<void> clearAllTasks() async {
-    await _notifService.cancelAllNotifications();
+  /// Hapus seluruh tugas. Prioritaskan pembersihan + penyimpanan lebih dulu;
+  /// pembatalan notifikasi bersifat best-effort agar kegagalan/hang di plugin
+  /// notifikasi tidak membuat penghapusan tidak jadi.
+  Future<bool> clearAllTasks() async {
     _tasks.clear();
-    await _saveTasks();
+    _timeBlocks = [];
+    final saved = await _saveTasks();
     notifyListeners();
+    try {
+      await _notifService.cancelAllNotifications();
+    } catch (e) {
+      debugPrint('Gagal membatalkan notifikasi saat hapus semua: $e');
+    }
+    return saved;
   }
 
   // ─────────────────────────────────────────────

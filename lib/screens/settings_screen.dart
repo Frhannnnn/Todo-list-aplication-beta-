@@ -572,11 +572,15 @@ class SettingsScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(c), child: const Text('Batal')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            onPressed: () {
-              context.read<TaskProvider>().clearAllTasks();
+            onPressed: () async {
+              final provider = context.read<TaskProvider>();
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(c);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Semua tugas telah dihapus'),
+              final ok = await provider.clearAllTasks();
+              messenger.showSnackBar(SnackBar(
+                  content: Text(ok
+                      ? 'Semua tugas telah dihapus'
+                      : 'Gagal menghapus — coba lagi'),
                   backgroundColor: AppTheme.danger));
             },
             child: const Text('Hapus Semua'),
