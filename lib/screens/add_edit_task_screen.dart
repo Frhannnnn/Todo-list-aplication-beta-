@@ -141,13 +141,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                       validator: (v) =>
                           v!.isEmpty ? 'Wajib diisi' : null),
                   const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(child: _buildLingkupDropdown(provider)),
-                      const SizedBox(width: 10),
-                      Expanded(child: _buildKategoriDropdown(provider)),
-                    ],
-                  ),
+                  _buildLingkupDropdown(provider),
+                  const SizedBox(height: 12),
+                  _buildKategoriDropdown(provider),
                   if (_isAkademik) ...[
                     const SizedBox(height: 12),
                     _buildTextField(
@@ -308,30 +304,42 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       _lingkupTugas = scopes.first;
     }
 
-    return DropdownButtonFormField<String>(
-      initialValue: _lingkupTugas,
-      isExpanded: true,
-      decoration: const InputDecoration(
-        labelText: 'Lingkup Tugas',
-        prefixIcon: Icon(Icons.label_outline, color: AppTheme.primary),
-      ),
-      items: scopes
-          .map((s) => DropdownMenuItem(
-              value: s,
-              child: Text(s, overflow: TextOverflow.ellipsis)))
-          .toList(),
-      onChanged: (v) {
-        if (v == null) return;
-        setState(() {
-          _lingkupTugas = v;
-          // Kategori independen per lingkup (Issue #4) — reset ke
-          // kategori pertama milik lingkup baru saat lingkup diganti.
-          final catsForNewScope = provider.categoriesForScope(v);
-          _category = catsForNewScope.isNotEmpty
-              ? catsForNewScope.first
-              : '';
-        });
-      },
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            initialValue: _lingkupTugas,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Lingkup Tugas',
+              prefixIcon:
+                  Icon(Icons.label_outline, color: AppTheme.primary),
+            ),
+            items: scopes
+                .map((s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s, overflow: TextOverflow.ellipsis)))
+                .toList(),
+            onChanged: (v) {
+              if (v == null) return;
+              setState(() {
+                _lingkupTugas = v;
+                // Kategori independen per lingkup (Issue #4) — reset ke
+                // kategori pertama milik lingkup baru saat lingkup diganti.
+                final catsForNewScope = provider.categoriesForScope(v);
+                _category =
+                    catsForNewScope.isNotEmpty ? catsForNewScope.first : '';
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
+          tooltip: 'Tambah lingkup baru',
+          onPressed: () => _showAddScopeDialog(provider),
+        ),
+      ],
     );
   }
 
@@ -383,20 +391,32 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       );
     }
 
-    return DropdownButtonFormField<String>(
-      initialValue: validCategory,
-      isExpanded: true,
-      decoration: const InputDecoration(
-        labelText: 'Kategori',
-        prefixIcon:
-            Icon(Icons.category_outlined, color: AppTheme.primary),
-      ),
-      items: categories
-          .map((c) => DropdownMenuItem(
-              value: c,
-              child: Text(c, overflow: TextOverflow.ellipsis)))
-          .toList(),
-      onChanged: (v) => setState(() => _category = v!),
+    return Row(
+      children: [
+        Expanded(
+          child: DropdownButtonFormField<String>(
+            initialValue: validCategory,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Kategori',
+              prefixIcon:
+                  Icon(Icons.category_outlined, color: AppTheme.primary),
+            ),
+            items: categories
+                .map((c) => DropdownMenuItem(
+                    value: c,
+                    child: Text(c, overflow: TextOverflow.ellipsis)))
+                .toList(),
+            onChanged: (v) => setState(() => _category = v!),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
+          tooltip: 'Tambah kategori baru',
+          onPressed: () => _showAddCategoryDialog(provider),
+        ),
+      ],
     );
   }
 
@@ -426,44 +446,52 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       ('3 hari', today.add(const Duration(days: 3))),
       ('Minggu depan', today.add(const Duration(days: 7))),
     ];
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: presets.map((p) {
-        final target = DateTime(p.$2.year, p.$2.month, p.$2.day, 23, 59);
-        final selected = _deadline.year == target.year &&
-            _deadline.month == target.month &&
-            _deadline.day == target.day &&
-            _deadline.hour == 23 &&
-            _deadline.minute == 59;
-        return GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            setState(() => _deadline = target);
-          },
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: selected
-                  ? AppTheme.primary.withValues(alpha: 0.1)
-                  : Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: selected ? AppTheme.primary : AppTheme.border,
-                  width: selected ? 1.5 : 1),
-            ),
-            child: Text(
-              p.$1,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: selected ? AppTheme.primary : AppTheme.textSecondary,
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: presets.map((p) {
+          final target = DateTime(p.$2.year, p.$2.month, p.$2.day, 23, 59);
+          final selected = _deadline.year == target.year &&
+              _deadline.month == target.month &&
+              _deadline.day == target.day &&
+              _deadline.hour == 23 &&
+              _deadline.minute == 59;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _deadline = target);
+                },
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppTheme.primary.withValues(alpha: 0.1)
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: selected ? AppTheme.primary : AppTheme.border,
+                        width: selected ? 1.5 : 1),
+                  ),
+                  child: Text(
+                    p.$1,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          selected ? AppTheme.primary : AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        }).toList(),
+      ),
     );
   }
 

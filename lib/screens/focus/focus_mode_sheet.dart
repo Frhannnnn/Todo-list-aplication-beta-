@@ -107,10 +107,19 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
             ] else ...[
               const Text('Preset', style: _sectionLabel),
               const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: kFocusPresets.map(_presetChip).toList(),
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: kFocusPresets
+                      .map((p) => Expanded(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 3),
+                              child: _presetChip(p),
+                            ),
+                          ))
+                      .toList(),
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -178,7 +187,7 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
       onTap: () => setState(() => _preset = preset),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
         decoration: BoxDecoration(
           color: selected
               ? AppTheme.primary.withValues(alpha: 0.1)
@@ -189,19 +198,22 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
               width: selected ? 1.5 : 1),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(preset.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
                 style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 11.5,
                     fontWeight: FontWeight.w700,
                     color:
                         selected ? AppTheme.primary : AppTheme.textPrimary)),
-            const SizedBox(height: 2),
-            Text('${preset.focusMinutes}/${preset.breakMinutes} mnt',
+            const SizedBox(height: 3),
+            Text('${preset.focusMinutes}/${preset.breakMinutes}m',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 11,
+                    fontSize: 10,
                     color: selected
                         ? AppTheme.primary.withValues(alpha: 0.8)
                         : AppTheme.textSecondary)),
