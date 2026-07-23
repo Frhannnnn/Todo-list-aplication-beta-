@@ -74,23 +74,26 @@ class _FocusModeSheetState extends State<_FocusModeSheet> {
             const SizedBox(height: 18),
             const Text('Mode', style: _sectionLabel),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _modeCard(FocusMode.focus,
-                      Icons.center_focus_strong_rounded, 'Navigasi terkunci'),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _modeCard(FocusMode.flexible, Icons.tune_rounded,
-                      'Bebas berpindah'),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: _modeCard(FocusMode.custom, Icons.build_rounded,
-                      'Atur sendiri'),
-                ),
-              ],
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _modeCard(FocusMode.focus,
+                        Icons.center_focus_strong_rounded, 'Navigasi terkunci'),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _modeCard(FocusMode.flexible, Icons.tune_rounded,
+                        'Bebas berpindah'),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _modeCard(FocusMode.custom, Icons.build_rounded,
+                        'Atur sendiri'),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 20),
             if (_isCustom) ...[
