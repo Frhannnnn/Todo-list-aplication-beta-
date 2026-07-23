@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/task_provider.dart';
@@ -276,6 +277,8 @@ class SettingsScreen extends StatelessWidget {
         style: TextStyle(
             fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
       ),
+      const SizedBox(height: 10),
+      _buildBackupStatus(),
       const SizedBox(height: 14),
       Row(
         children: [
@@ -313,6 +316,51 @@ class SettingsScreen extends StatelessWidget {
     ]);
   }
 
+  /// Pengingat halus soal pencadangan: hijau bila baru dicadangkan, kuning
+  /// bila sudah lama / belum pernah — supaya data tidak hilang saat app
+  /// dihapus/ganti HP.
+  Widget _buildBackupStatus() {
+    return Consumer<TaskProvider>(
+      builder: (context, provider, _) {
+        final last = provider.lastBackupAt;
+        final days =
+            last == null ? null : DateTime.now().difference(last).inDays;
+        final stale = last == null || (days != null && days >= 7);
+        final color = stale ? AppTheme.warning : AppTheme.success;
+        final text = last == null
+            ? 'Belum pernah dicadangkan — cadangkan agar data aman.'
+            : 'Terakhir dicadangkan: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(last)}';
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                  stale
+                      ? Icons.backup_outlined
+                      : Icons.verified_outlined,
+                  color: color,
+                  size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(text,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: color)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _exportData(BuildContext context) async {
     final provider = context.read<TaskProvider>();
     try {
@@ -324,9 +372,10 @@ class SettingsScreen extends StatelessWidget {
       final file = XFile.fromData(
         bytes,
         mimeType: 'application/json',
-        name: 'tugasku_backup_$timestamp.json',
+        name: 'priora_backup_$timestamp.json',
       );
       await Share.shareXFiles([file], text: 'Cadangan data Priora');
+      await provider.markBackupDone();
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

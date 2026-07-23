@@ -8,6 +8,7 @@ import '../services/task_provider.dart';
 import '../models/task_model.dart';
 import '../utils/app_theme.dart';
 import '../main.dart';
+import '../widgets/rename_dialog.dart';
 import 'ai_task_creator_screen.dart';
 import '../utils/recurrence.dart';
 
@@ -46,6 +47,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
 
   bool _isSaving = false;
   bool _showAdvanced = false;
+  // Tanda tangan nilai form saat pertama dibuka, untuk mendeteksi perubahan
+  // yang belum disimpan (guard "Buang perubahan?").
+  String? _initialSignature;
 
   bool get isEdit => widget.task != null;
   bool get _isAkademik => _lingkupTugas == _kAkademikScope;
@@ -99,7 +103,22 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         if (!isEdit && _lingkupTugas.isEmpty && provider.customScopes.isNotEmpty) {
           _lingkupTugas = provider.customScopes.first;
         }
-        return Scaffold(
+        // Rekam kondisi awal form sekali (setelah default lingkup terset).
+        _initialSignature ??= _formSignature();
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) async {
+            if (didPop || !mounted) return;
+            final nav = Navigator.of(context);
+            if (_formSignature() == _initialSignature) {
+              nav.pop();
+              return;
+            }
+            final discard = await _confirmDiscard();
+            if (!mounted || discard != true) return;
+            nav.pop();
+          },
+          child: Scaffold(
           backgroundColor: AppTheme.background,
           appBar: AppBar(
             title: Text(isEdit ? 'Edit Tugas' : 'Tambah Tugas'),
@@ -199,6 +218,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 const SizedBox(height: 40),
               ],
             ),
+          ),
           ),
         );
       },
@@ -333,13 +353,60 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
             },
           ),
         ),
-        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
           tooltip: 'Tambah lingkup baru',
           onPressed: () => _showAddScopeDialog(provider),
         ),
+        IconButton(
+          icon: const Icon(Icons.tune_rounded, color: AppTheme.textSecondary),
+          tooltip: 'Kelola lingkup',
+          onPressed: () => _showManageScopes(provider),
+        ),
       ],
+    );
+  }
+
+  void _showManageScopes(TaskProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ManageValuesSheet(
+        title: 'Kelola Lingkup Tugas',
+        subtitle: 'Tambah, ganti nama, atau hapus lingkup.',
+        addHint: 'Nama lingkup baru...',
+        getItems: () => provider.customScopes,
+        onAdd: (t) => provider.addScope(t),
+        onRename: (o, n) => provider.renameScope(o, n),
+        onDelete: (s) => provider.removeScope(s),
+        deleteGuard: (s) {
+          final n = provider.getTasksByScope(s).length;
+          if (n > 0) {
+            return 'Lingkup "$s" masih dipakai $n tugas. Pindahkan tugasnya dulu.';
+          }
+          if (provider.customScopes.length <= 1) {
+            return 'Minimal harus ada satu lingkup.';
+          }
+          return null;
+        },
+        onChanged: () {
+          if (!mounted) return;
+          setState(() {
+            final scopes = provider.customScopes;
+            if (scopes.isNotEmpty && !scopes.contains(_lingkupTugas)) {
+              _lingkupTugas = scopes.first;
+            }
+            final cats = provider.categoriesForScope(_lingkupTugas);
+            if (cats.isNotEmpty && !cats.contains(_category)) {
+              _category = cats.first;
+            }
+          });
+        },
+      ),
     );
   }
 
@@ -410,13 +477,51 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
             onChanged: (v) => setState(() => _category = v!),
           ),
         ),
-        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
           tooltip: 'Tambah kategori baru',
           onPressed: () => _showAddCategoryDialog(provider),
         ),
+        IconButton(
+          icon: const Icon(Icons.tune_rounded, color: AppTheme.textSecondary),
+          tooltip: 'Kelola kategori',
+          onPressed: () => _showManageCategories(provider),
+        ),
       ],
+    );
+  }
+
+  void _showManageCategories(TaskProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ManageValuesSheet(
+        title: 'Kelola Kategori',
+        subtitle: 'Kategori untuk lingkup "$_lingkupTugas".',
+        addHint: 'Nama kategori baru...',
+        getItems: () => provider.categoriesForScope(_lingkupTugas),
+        onAdd: (t) => provider.addCategoryToScope(_lingkupTugas, t),
+        onRename: (o, n) =>
+            provider.renameCategoryInScope(_lingkupTugas, o, n),
+        onDelete: (c) => provider.removeCategoryFromScope(_lingkupTugas, c),
+        deleteGuard: (c) =>
+            provider.categoriesForScope(_lingkupTugas).length <= 1
+                ? 'Minimal harus ada satu kategori.'
+                : null,
+        onChanged: () {
+          if (!mounted) return;
+          setState(() {
+            final cats = provider.categoriesForScope(_lingkupTugas);
+            if (cats.isNotEmpty && !cats.contains(_category)) {
+              _category = cats.first;
+            }
+          });
+        },
+      ),
     );
   }
 
@@ -1156,6 +1261,49 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
+  /// Ringkasan seluruh nilai form untuk mendeteksi perubahan belum tersimpan.
+  String _formSignature() => [
+        _namaTugasCtrl.text,
+        _catatanCtrl.text,
+        _mataKuliahCtrl.text,
+        _deadline.toIso8601String(),
+        _kepentingan,
+        _estimasiWaktu,
+        _lingkupTugas,
+        _category,
+        _status.index,
+        _notifEnabled,
+        _notifSchedule.join(','),
+        _recurrence.index,
+        _recurrenceInterval,
+        _recurrenceUnit.index,
+        _recurrenceEndDate?.toIso8601String() ?? '',
+        _recurrenceCount ?? '',
+      ].join('|');
+
+  Future<bool?> _confirmDiscard() {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Buang perubahan?'),
+        content: const Text('Perubahan yang belum disimpan akan hilang.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Buang'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _save() async {
     // Cegah tugas terdaftar dua kali akibat tap ganda pada tombol simpan
     // saat proses async (scheduler/penyimpanan) masih berjalan.
@@ -1403,6 +1551,214 @@ class _AddNameDialogState extends State<_AddNameDialog> {
               : const Text('Tambah'),
         ),
       ],
+    );
+  }
+}
+
+/// Bottom sheet generik untuk mengelola daftar nilai (lingkup/kategori):
+/// tambah, ganti nama, dan hapus — dengan penjaga hapus opsional. Sengaja
+/// sederhana & dapat dipakai ulang lewat callback.
+class _ManageValuesSheet extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final String addHint;
+  final List<String> Function() getItems;
+  final Future<void> Function(String) onAdd;
+  final Future<bool> Function(String oldName, String newName) onRename;
+  final Future<void> Function(String) onDelete;
+  final String? Function(String)? deleteGuard;
+  final VoidCallback onChanged;
+
+  const _ManageValuesSheet({
+    required this.title,
+    required this.subtitle,
+    required this.addHint,
+    required this.getItems,
+    required this.onAdd,
+    required this.onRename,
+    required this.onDelete,
+    required this.onChanged,
+    this.deleteGuard,
+  });
+
+  @override
+  State<_ManageValuesSheet> createState() => _ManageValuesSheetState();
+}
+
+class _ManageValuesSheetState extends State<_ManageValuesSheet> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _add() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) return;
+    await widget.onAdd(text);
+    _ctrl.clear();
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
+
+  Future<void> _rename(String old) async {
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => RenameDialog(
+        title: 'Ganti Nama',
+        initialValue: old,
+        onSubmit: (newName) => widget.onRename(old, newName),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {});
+      widget.onChanged();
+    }
+  }
+
+  Future<void> _delete(String item) async {
+    final blocked = widget.deleteGuard?.call(item);
+    if (blocked != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(blocked), backgroundColor: AppTheme.warning));
+      return;
+    }
+    await widget.onDelete(item);
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = widget.getItems();
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppTheme.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(widget.title,
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary)),
+            const SizedBox(height: 4),
+            Text(widget.subtitle,
+                style: const TextStyle(
+                    fontSize: 13, color: AppTheme.textSecondary)),
+            const SizedBox(height: 16),
+            if (items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8),
+                child: Text('Belum ada. Tambahkan di bawah.',
+                    style: TextStyle(color: AppTheme.textSecondary)),
+              )
+            else
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: items
+                        .map((it) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.label_outline_rounded,
+                                    color: AppTheme.primary, size: 18),
+                              ),
+                              title: Text(it,
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500)),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined,
+                                        color: AppTheme.textSecondary, size: 20),
+                                    tooltip: 'Ganti nama',
+                                    onPressed: () => _rename(it),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: AppTheme.danger,
+                                        size: 20),
+                                    tooltip: 'Hapus',
+                                    onPressed: () => _delete(it),
+                                  ),
+                                ],
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ),
+            const Divider(height: 24),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _ctrl,
+                    decoration: InputDecoration(
+                      hintText: widget.addHint,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppTheme.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                            color: AppTheme.primary, width: 1.5),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    onSubmitted: (_) => _add(),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _add,
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 14),
+                  ),
+                  child: const Text('Tambah'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

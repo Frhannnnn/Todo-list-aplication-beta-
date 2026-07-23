@@ -40,6 +40,18 @@ class TaskProvider with ChangeNotifier {
   List<String> _customScopes = ['Perkuliahan', 'Tugas Rumah', 'Pekerjaan'];
   Map<String, List<String>> _categoriesByScope = {};
 
+  // Kapan data terakhir dicadangkan (ekspor). Untuk pengingat backup.
+  DateTime? _lastBackupAt;
+  DateTime? get lastBackupAt => _lastBackupAt;
+
+  /// Tandai bahwa data baru saja dicadangkan (dipanggil setelah ekspor sukses).
+  Future<void> markBackupDone() async {
+    _lastBackupAt = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_backup_at', _lastBackupAt!.toIso8601String());
+    notifyListeners();
+  }
+
   bool get notifEnabled => _notifEnabled;
   bool get dailyReminderEnabled => _dailyReminderEnabled;
   int get dailyReminderHour => _dailyReminderHour;
@@ -170,6 +182,9 @@ class TaskProvider with ChangeNotifier {
 
   Future<void> _loadCustomData() async {
     final prefs = await SharedPreferences.getInstance();
+
+    final rawBackup = prefs.getString('last_backup_at');
+    if (rawBackup != null) _lastBackupAt = DateTime.tryParse(rawBackup);
 
     final rawScopes = prefs.getStringList('custom_scopes');
     if (rawScopes != null && rawScopes.isNotEmpty) {
