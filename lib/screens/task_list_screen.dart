@@ -373,10 +373,18 @@ class _TaskListScreenState extends State<TaskListScreen> {
     tasks = _applyFilterAndSort(tasks, totalActiveTasks);
 
     Widget child;
-    if (tasks.isEmpty && _filterPrioritas != 'Semua') {
+    if (tasks.isEmpty && _searchQuery.trim().isNotEmpty) {
+      child = _scrollableCenter(
+          _buildNoResultsState('Tidak ada tugas yang cocok dengan pencarianmu.'));
+    } else if (tasks.isEmpty && _filterPrioritas != 'Semua') {
       child = _scrollableCenter(_buildEmptyFilterState(_filterPrioritas));
-    } else if (tasks.isEmpty) {
+    } else if (tasks.isEmpty && provider.tasks.isEmpty) {
+      // Benar-benar belum ada tugas → onboarding.
       child = _scrollableCenter(_buildEmptyState(context));
+    } else if (tasks.isEmpty) {
+      // Ada tugas lain, tapi lingkup/tab ini kosong.
+      child =
+          _scrollableCenter(_buildNoResultsState('Belum ada tugas di sini.'));
     } else {
       child = ListView.builder(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -611,6 +619,36 @@ class _TaskListScreenState extends State<TaskListScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNoResultsState(String message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.search_off_rounded,
+                  size: 32, color: AppTheme.primary),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                  color: AppTheme.textSecondary, fontSize: 14),
+            ),
+          ],
+        ),
       ),
     );
   }

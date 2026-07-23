@@ -1,6 +1,7 @@
 // lib/screens/add_edit_task_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/task_provider.dart';
@@ -134,6 +135,9 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 _buildSection('Informasi Tugas', [
                   _buildTextField(_namaTugasCtrl, 'Nama Tugas',
                       Icons.assignment,
+                      // Fokus otomatis saat menambah tugas baru agar keyboard
+                      // langsung siap; jangan saat mengedit.
+                      autofocus: !isEdit,
                       validator: (v) =>
                           v!.isEmpty ? 'Wajib diisi' : null),
                   const SizedBox(height: 12),
@@ -152,6 +156,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 ]),
                 const SizedBox(height: 16),
                 _buildSection('Deadline', [
+                  _buildDeadlinePresets(),
+                  const SizedBox(height: 12),
                   _buildDeadlinePicker(),
                 ]),
                 const SizedBox(height: 16),
@@ -264,10 +270,12 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
 
   Widget _buildTextField(TextEditingController ctrl, String label,
       IconData icon,
-      {String? Function(String?)? validator}) {
+      {String? Function(String?)? validator, bool autofocus = false}) {
     return TextFormField(
       controller: ctrl,
       validator: validator,
+      autofocus: autofocus,
+      textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: AppTheme.primary),
@@ -405,6 +413,58 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     if (result != null && mounted) {
       setState(() => _category = result);
     }
+  }
+
+  /// Pintasan deadline umum agar tak perlu selalu buka date+time picker.
+  /// Menyetel tanggal ke pukul 23:59 (akhir hari) sebagai konvensi deadline.
+  Widget _buildDeadlinePresets() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final presets = <(String, DateTime)>[
+      ('Hari ini', today),
+      ('Besok', today.add(const Duration(days: 1))),
+      ('3 hari', today.add(const Duration(days: 3))),
+      ('Minggu depan', today.add(const Duration(days: 7))),
+    ];
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: presets.map((p) {
+        final target = DateTime(p.$2.year, p.$2.month, p.$2.day, 23, 59);
+        final selected = _deadline.year == target.year &&
+            _deadline.month == target.month &&
+            _deadline.day == target.day &&
+            _deadline.hour == 23 &&
+            _deadline.minute == 59;
+        return GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            setState(() => _deadline = target);
+          },
+          child: Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: selected
+                  ? AppTheme.primary.withValues(alpha: 0.1)
+                  : Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                  color: selected ? AppTheme.primary : AppTheme.border,
+                  width: selected ? 1.5 : 1),
+            ),
+            child: Text(
+              p.$1,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: selected ? AppTheme.primary : AppTheme.textSecondary,
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 
   Widget _buildDeadlinePicker() {
