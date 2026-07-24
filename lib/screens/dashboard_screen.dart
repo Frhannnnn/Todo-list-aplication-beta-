@@ -1,13 +1,16 @@
 // lib/screens/dashboard_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../models/task_model.dart';
 import '../services/task_provider.dart';
 import '../utils/app_theme.dart';
 import '../utils/recurrence.dart';
 import '../widgets/task_card_widget.dart';
+import '../utils/task_status_actions.dart';
+import '../utils/app_assets.dart';
+import '../main.dart';
 import 'add_edit_task_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
@@ -29,19 +32,23 @@ class DashboardScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 20),
+                            const SizedBox(height: 16),
                         _buildSummaryCard(provider),
+                        const SizedBox(height: 12),
+                        _buildHariIniRow(provider),
+                        const SizedBox(height: 12),
+                        _buildFocusNowButton(context, provider),
+                        _buildTaskCalendar(provider),
                         const SizedBox(height: 24),
-                        _buildProgressAndCalendar(provider),
-                        const SizedBox(height: 28),
-                        _buildSectionTitle('Tugas Mendatang'),
-                        const SizedBox(height: 12),
-                        _buildUpcomingTasks(provider),
-                        const SizedBox(height: 28),
-                        _buildSectionTitle('Lingkup Tugas Aktif'),
-                        const SizedBox(height: 12),
-                        _buildCourseCards(provider),
-                        _buildMataKuliahSection(provider),
+                        _buildSectionHeader(
+                          'Prioritas Teratas',
+                          onSeeAll: provider.tasks.isEmpty
+                              ? null
+                              : () => MainNavigation.tabIndex.value =
+                                  MainNavigation.taskListTab,
+                        ),
+                        const SizedBox(height: 10),
+                        _buildTopPriorityTasks(context, provider),
                         const SizedBox(height: 100),
                       ],
                     ),
@@ -61,14 +68,51 @@ class DashboardScreen extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const SizedBox(width: 40, height: 40),
-          const Text(
-            'Tugas',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Image.asset(
+                    AppAssets.logo,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                        Icons.check_circle_rounded,
+                        color: AppTheme.primary,
+                        size: 24),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Priora',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  SizedBox(height: 1),
+                  Text(
+                    'Ringkasan hari ini',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
           GestureDetector(
             onTap: () => Navigator.push(
@@ -167,169 +211,43 @@ class DashboardScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressAndCalendar(TaskProvider provider) {
+  Widget _buildHariIniRow(TaskProvider provider) {
     final total = provider.totalTugas;
     final selesai = provider.tugasSelesai;
-    final pct = total > 0 ? (selesai / total * 100).round() : 0;
-
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-        // Circular progress
-        Expanded(
-          flex: 4,
-          child: Column(
-            children: [
-              const Text(
-                'PROGRES MINGGUAN',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textSecondary,
-                  letterSpacing: 1,
-                ),
-              ),
-              const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final size =
-                      constraints.maxWidth < 120 ? constraints.maxWidth : 120.0;
-                  return SizedBox(
-                    width: size,
-                    height: size,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: size,
-                          height: size,
-                          child: CircularProgressIndicator(
-                            value: total > 0 ? selesai / total : 0,
-                            strokeWidth: 10,
-                            backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
-                            valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
-                            strokeCap: StrokeCap.round,
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.assignment_turned_in_outlined,
-                                color: AppTheme.primary, size: 22),
-                            const SizedBox(height: 4),
-                            Text(
-                              '$pct%',
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            const Text(
-                              'Selesai',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 16),
-        // Streak motivasi
-        Expanded(
-          flex: 5,
-          child: _buildStreakCard(provider),
-        ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        _buildTaskCalendar(provider),
-      ],
-    );
-  }
-
-  Widget _buildStreakCard(TaskProvider provider) {
     final streak = provider.currentStreak;
-    final selesai = provider.tugasSelesai;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.warning.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.25)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          const Row(
-            children: [
-              Icon(Icons.local_fire_department_rounded,
-                  color: AppTheme.warning, size: 22),
-              SizedBox(width: 6),
-              Text(
-                'Streak',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                '$streak',
-                style: const TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.warning,
-                ),
-              ),
-              const SizedBox(width: 4),
-              const Padding(
-                padding: EdgeInsets.only(bottom: 5),
-                child: Text(
-                  'hari',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+          const Icon(Icons.check_circle_outline_rounded,
+              color: AppTheme.primary, size: 18),
+          const SizedBox(width: 6),
           Text(
-            streak == 0
-                ? 'Selesaikan 1 tugas hari ini untuk memulai!'
-                : 'Beruntun! Pertahankan ya 🔥',
+            '$selesai/$total selesai',
             style: const TextStyle(
-              fontSize: 11,
-              color: AppTheme.textSecondary,
-              height: 1.3,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(width: 16),
+          Container(width: 1, height: 16, color: AppTheme.border),
+          const SizedBox(width: 16),
+          const Icon(Icons.local_fire_department_rounded,
+              color: AppTheme.warning, size: 18),
+          const SizedBox(width: 6),
           Text(
-            'Total selesai: $selesai',
+            '$streak hari',
             style: const TextStyle(
-              fontSize: 11,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: AppTheme.textSecondary,
+              color: AppTheme.textPrimary,
             ),
           ),
         ],
@@ -339,21 +257,27 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildTaskCalendar(TaskProvider provider) {
     final now = DateTime.now();
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final leadingBlanks =
-        DateTime(now.year, now.month, 1).weekday - DateTime.monday;
-    final totalCells = leadingBlanks + daysInMonth;
+    final today = DateTime(now.year, now.month, now.day);
+    // Minggu berjalan: Senin s/d Minggu yang memuat hari ini.
+    final weekStart =
+        today.subtract(Duration(days: today.weekday - DateTime.monday));
+    final weekDays = List.generate(7, (i) => weekStart.add(Duration(days: i)));
+    final weekEnd = DateTime(
+        weekStart.year, weekStart.month, weekStart.day + 6, 23, 59);
 
-    final monthEnd = DateTime(now.year, now.month, daysInMonth, 23, 59);
-    final previewDays = <int>{};
+    bool sameDay(DateTime a, DateTime b) =>
+        a.year == b.year && a.month == b.month && a.day == b.day;
+
+    // Tanggal dalam minggu ini yang punya occurrence tugas berulang.
+    final previewDays = <DateTime>{};
     for (final t in provider.tasks) {
       if (t.recurrence == RecurrenceType.none ||
           t.status == TaskStatus.selesai) {
         continue;
       }
-      for (final d in upcomingOccurrences(t, until: monthEnd)) {
-        if (d.year == now.year && d.month == now.month) {
-          previewDays.add(d.day);
+      for (final d in upcomingOccurrences(t, until: weekEnd)) {
+        if (!d.isBefore(weekStart)) {
+          previewDays.add(DateTime(d.year, d.month, d.day));
         }
       }
     }
@@ -380,357 +304,326 @@ class DashboardScreen extends StatelessWidget {
                   color: AppTheme.textPrimary,
                 ),
               ),
-              Text(
-                DateFormat('MMMM yyyy', 'id_ID').format(now),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textSecondary,
+              InkWell(
+                onTap: () =>
+                    MainNavigation.tabIndex.value = MainNavigation.calendarTab,
+                borderRadius: BorderRadius.circular(20),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Buka Kalender',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                      SizedBox(width: 2),
+                      Icon(Icons.chevron_right,
+                          size: 16, color: AppTheme.primary),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
-            children: const ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min']
-                .map(
-                  (d) => Expanded(
-                    child: Center(
-                      child: Text(
-                        d,
+            children: weekDays.map((date) {
+              final isToday = sameDay(date, today);
+              final dayTasks = provider.tasks
+                  .where((t) => sameDay(t.deadline, date))
+                  .toList();
+              final hasTask = dayTasks.isNotEmpty;
+              final hasOverdue = dayTasks.any((t) => t.isOverdue);
+              final hasPreview = previewDays.contains(date);
+              const weekdayLabels = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: Column(
+                    children: [
+                      Text(
+                        weekdayLabels[date.weekday - 1],
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.textSecondary,
                         ),
                       ),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 8),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: totalCells,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,
-              mainAxisSpacing: 4,
-              crossAxisSpacing: 4,
-            ),
-            itemBuilder: (context, index) {
-              if (index < leadingBlanks) return const SizedBox.shrink();
-              final day = index - leadingBlanks + 1;
-              final date = DateTime(now.year, now.month, day);
-              final isToday = day == now.day;
-              final dayTasks = provider.tasks
-                  .where((t) =>
-                      t.deadline.year == date.year &&
-                      t.deadline.month == date.month &&
-                      t.deadline.day == date.day)
-                  .toList();
-              final hasTask = dayTasks.isNotEmpty;
-              final hasOverdue = dayTasks.any((t) => t.isOverdue);
-
-              return Container(
-                decoration: BoxDecoration(
-                  color: isToday
-                      ? AppTheme.primary
-                      : hasTask
-                          ? AppTheme.primary.withValues(alpha: 0.08)
-                          : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '$day',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        fontWeight: isToday || hasTask
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: isToday ? Colors.white : AppTheme.textPrimary,
-                      ),
-                    ),
-                    if (hasTask) ...[
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 6),
+                      // Lingkaran simetris untuk tanggal.
                       Container(
-                        width: 5,
-                        height: 5,
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: isToday
-                              ? Colors.white
-                              : hasOverdue
-                                  ? AppTheme.danger
-                                  : AppTheme.primary,
+                              ? AppTheme.primary
+                              : hasTask
+                                  ? AppTheme.primary.withValues(alpha: 0.08)
+                                  : Colors.transparent,
+                        ),
+                        child: Text(
+                          '${date.day}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isToday || hasTask
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: isToday
+                                ? Colors.white
+                                : AppTheme.textPrimary,
+                          ),
                         ),
                       ),
-                    ],
-                    if (!hasTask && !isToday && previewDays.contains(day)) ...[
-                      const SizedBox(height: 2),
-                      Container(
-                        width: 6,
+                      const SizedBox(height: 5),
+                      // Penanda tugas/occurrence di bawah lingkaran; slot tetap
+                      // agar semua tanggal sejajar.
+                      SizedBox(
                         height: 6,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: AppTheme.primary, width: 1.2),
-                        ),
+                        child: hasTask
+                            ? Container(
+                                width: 5,
+                                height: 5,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: hasOverdue
+                                      ? AppTheme.danger
+                                      : AppTheme.primary,
+                                ),
+                              )
+                            : (hasPreview
+                                ? Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                          color: AppTheme.primary, width: 1.2),
+                                    ),
+                                  )
+                                : null),
                       ),
                     ],
-                  ],
+                  ),
                 ),
               );
-            },
+            }).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w700,
-        color: AppTheme.textPrimary,
-      ),
-    );
-  }
-
-  Widget _buildUpcomingTasks(TaskProvider provider) {
-    final tasks = List.of(provider.activeTasks)
-      ..sort((a, b) => a.deadline.compareTo(b.deadline));
-
-    if (tasks.isEmpty) {
-      return _buildEmptyState('Tidak ada tugas mendatang 🎉');
-    }
-
-    return Builder(
-      builder: (context) => Column(
-        children: tasks
-            .take(3)
-            .map((t) => TaskCardWidget(
-                  task: t,
-                  showRanking: false,
-                  totalActiveTasks: provider.activeTasks.length,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => AddEditTaskScreen(task: t)),
-                  ),
-                ))
-            .toList(),
-      ),
-    );
-  }
-
-  Widget _buildCourseCards(TaskProvider provider) {
-    // Group tasks by lingkupTugas
-    final scopeMap = <String, List<dynamic>>{};
-    for (final task in provider.activeTasks) {
-      scopeMap.putIfAbsent(task.lingkupTugas, () => []).add(task);
-    }
-
-    if (scopeMap.isEmpty) {
-      return _buildEmptyState('Belum ada lingkup tugas aktif');
-    }
-
-    final scopes = scopeMap.entries.take(4).toList();
-
-    return SizedBox(
-      height: 130,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: scopes.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final entry = scopes[index];
-          final taskCount = entry.value.length;
-          final completedInScope = provider.tasks
-              .where((t) =>
-                  t.lingkupTugas == entry.key &&
-                  t.status == TaskStatus.selesai)
-              .length;
-          final totalInScope = provider.tasks
-              .where((t) => t.lingkupTugas == entry.key)
-              .length;
-          final progress =
-              totalInScope > 0 ? completedInScope / totalInScope : 0.0;
-
-          final colors = [
-            AppTheme.primary,
-            AppTheme.accent,
-            AppTheme.warning,
-            AppTheme.danger,
-          ];
-          final color = colors[index % colors.length];
-
-          return Container(
-            width: 140,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: color.withValues(alpha: 0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.label_rounded, color: color, size: 20),
-                ),
-                const Spacer(),
-                Text(
-                  entry.key,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$taskCount Tugas',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          backgroundColor: color.withValues(alpha: 0.15),
-                          valueColor: AlwaysStoppedAnimation(color),
-                          minHeight: 4,
-                        ),
-                      ),
+  /// Judul section dengan aksi "Lihat Semua" opsional di kanan.
+  Widget _buildSectionHeader(String title, {VoidCallback? onSeeAll}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+          ),
+        ),
+        if (onSeeAll != null)
+          InkWell(
+            onTap: onSeeAll,
+            borderRadius: BorderRadius.circular(20),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Lihat Semua',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.primary,
                     ),
-                    const SizedBox(width: 6),
-                    Text(
-                      '${(progress * 100).round()}%',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+                  ),
+                  SizedBox(width: 2),
+                  Icon(Icons.chevron_right, size: 16, color: AppTheme.primary),
+                ],
+              ),
             ),
-          );
-        },
-      ),
+          ),
+      ],
     );
   }
 
-  /// Ringkasan tugas per mata kuliah (Issue #2). Hanya tugas berlingkup
-  /// "Perkuliahan" yang mengisi mata kuliah yang dihitung di sini.
-  Widget _buildMataKuliahSection(TaskProvider provider) {
-    final matkulMap = <String, List<Task>>{};
-    for (final task in provider.tasks) {
-      final matkul = task.mataKuliah?.trim();
-      if (task.lingkupTugas == 'Perkuliahan' &&
-          matkul != null &&
-          matkul.isNotEmpty) {
-        matkulMap.putIfAbsent(matkul, () => []).add(task);
-      }
-    }
+  /// Tugas aktif terurut prioritas SAW (peringkat terkecil dulu; tugas tanpa
+  /// peringkat memakai deadline terdekat). Dipakai bersama oleh tombol
+  /// "Fokus Sekarang" dan daftar "Prioritas Teratas".
+  List<Task> _activeByPriority(TaskProvider provider) {
+    return List.of(provider.activeTasks)
+      ..sort((a, b) {
+        if (a.ranking == 0 && b.ranking == 0) {
+          return a.deadline.compareTo(b.deadline);
+        }
+        if (a.ranking == 0) return 1;
+        if (b.ranking == 0) return -1;
+        return a.ranking.compareTo(b.ranking);
+      });
+  }
 
-    if (matkulMap.isEmpty) return const SizedBox.shrink();
-
-    final entries = matkulMap.entries.toList()
-      ..sort((a, b) => b.value.length.compareTo(a.value.length));
+  /// Aksi satu-ketuk: ambil tugas prioritas tertinggi lalu langsung buka alur
+  /// Focus Session untuknya — menyatukan prioritas SAW + fokus jadi satu aksi
+  /// tanpa pengguna perlu memilih tugas sendiri.
+  Widget _buildFocusNowButton(BuildContext context, TaskProvider provider) {
+    final tasks = _activeByPriority(provider);
+    if (tasks.isEmpty) return const SizedBox.shrink();
+    final top = tasks.first;
 
     return Padding(
-      padding: const EdgeInsets.only(top: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionTitle('Ringkasan Mata Kuliah'),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.border),
+      padding: const EdgeInsets.only(bottom: 16),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.mediumImpact();
+          handleStatusChange(
+              context, provider, top, TaskStatus.sedangDikerjakan);
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppTheme.primary, AppTheme.secondary],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: Column(
-              children: entries.map((entry) {
-                final tasks = entry.value;
-                final selesai = tasks
-                    .where((t) => t.status == TaskStatus.selesai)
-                    .length;
-                final totalMenit =
-                    tasks.fold<int>(0, (sum, t) => sum + t.totalFocusMinutes);
-                final subtitle = totalMenit > 0
-                    ? '${tasks.length} tugas • $selesai selesai • ${(totalMenit / 60).toStringAsFixed(1)} jam fokus'
-                    : '${tasks.length} tugas • $selesai selesai';
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.bolt_rounded,
+                    color: Colors.white, size: 26),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Fokus Sekarang',
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white)),
+                    const SizedBox(height: 2),
+                    Text('Mulai: ${top.namaTugas}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 12, color: Colors.white70)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.play_arrow_rounded,
+                  color: Colors.white, size: 28),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.menu_book_rounded,
-                            color: AppTheme.primary, size: 18),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              entry.key,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.textPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              subtitle,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
+  /// Tiga tugas paling prioritas (peringkat SAW terkecil). Ini inti nilai
+  /// aplikasi: pengguna langsung tahu apa yang harus dikerjakan lebih dulu.
+  Widget _buildTopPriorityTasks(BuildContext context, TaskProvider provider) {
+    final tasks = _activeByPriority(provider);
+
+    if (tasks.isEmpty) {
+      // First-run (belum pernah ada tugas): tuntun buat tugas pertama langsung
+      // dari Dashboard, karena inilah layar yang pertama dilihat pengguna.
+      if (provider.tasks.isEmpty) {
+        return _buildOnboardingCard(context);
+      }
+      // Ada tugas tapi semua selesai — beri apresiasi.
+      return _buildEmptyState('Semua tugas selesai');
+    }
+
+    return Column(
+      children: tasks
+          .take(3)
+          .map((t) => TaskCardWidget(
+                task: t,
+                showRanking: false,
+                totalActiveTasks: provider.activeTasks.length,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => AddEditTaskScreen(task: t)),
+                ),
+              ))
+          .toList(),
+    );
+  }
+
+  /// Kartu penuntun untuk pengguna baru di Dashboard: jelas apa yang harus
+  /// dilakukan pertama kali (buat tugas), tanpa harus menebak-nebak tab mana.
+  Widget _buildOnboardingCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          Image.asset(
+            AppAssets.emptyTasks,
+            width: 140,
+            height: 105,
+            errorBuilder: (_, __, ___) => const Icon(Icons.assignment_outlined,
+                size: 44, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'Mulai dari sini',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Tambahkan tugas pertamamu, lalu Priora otomatis menyusun mana yang harus dikerjakan lebih dulu.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddEditTaskScreen()),
+              ),
+              icon: const Icon(Icons.add, size: 20),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              label: const Text('Buat Tugas Pertama',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
             ),
           ),
         ],
@@ -741,7 +634,7 @@ class DashboardScreen extends StatelessWidget {
   Widget _buildEmptyState(String message) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -749,9 +642,16 @@ class DashboardScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          const Text('📭', style: TextStyle(fontSize: 36)),
-          const SizedBox(height: 8),
+          Image.asset(
+            AppAssets.emptyTasks,
+            width: 120,
+            height: 90,
+            errorBuilder: (_, __, ___) => const Icon(Icons.inbox_outlined,
+                size: 40, color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 10),
           Text(message,
+              textAlign: TextAlign.center,
               style: const TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
         ],
       ),

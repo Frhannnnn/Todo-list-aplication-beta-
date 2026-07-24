@@ -120,12 +120,12 @@ class Task {
   /// Label urgensi otomatis untuk ditampilkan di UI
   String get urgensiLabel {
     final sisa = deadline.difference(DateTime.now()).inHours;
-    if (sisa <= 0) return '🔴 Sudah Lewat';
-    if (sisa <= 3) return '🔴 Sangat Mendesak';
-    if (sisa <= 24) return '🟠 Mendesak';
-    if (sisa <= 72) return '🟡 Perlu Perhatian';
-    if (sisa <= 168) return '🟢 Masih Aman';
-    return '✅ Santai';
+    if (sisa <= 0) return 'Sudah Lewat';
+    if (sisa <= 3) return 'Sangat Mendesak';
+    if (sisa <= 24) return 'Mendesak';
+    if (sisa <= 72) return 'Perlu Perhatian';
+    if (sisa <= 168) return 'Masih Aman';
+    return 'Santai';
   }
 
   Map<String, dynamic> toJson() {

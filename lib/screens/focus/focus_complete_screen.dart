@@ -9,7 +9,6 @@ import '../../services/task_provider.dart';
 import '../../utils/app_theme.dart';
 import 'focus_break_screen.dart';
 import 'focus_timer_screen.dart';
-import 'widgets/focus_info_row.dart';
 
 /// Halaman setelah sebuah blok fokus selesai: ringkasan, pertanyaan pencapaian
 /// target, dan aksi lanjutan (istirahat / sesi berikutnya / selesai).
@@ -88,8 +87,15 @@ class _FocusCompleteScreenState extends State<FocusCompleteScreen> {
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.textPrimary)),
-              const SizedBox(height: 20),
-              _infoCard(session),
+              const SizedBox(height: 8),
+              Text(
+                'Fokus ${session.focusMinutes} menit • ${widget.task.namaTugas}',
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontSize: 14, color: AppTheme.textSecondary),
+              ),
               const SizedBox(height: 24),
               const Text('Apakah target sesi tercapai?',
                   style: TextStyle(
@@ -139,35 +145,6 @@ class _FocusCompleteScreenState extends State<FocusCompleteScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _infoCard(FocusSession session) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        children: [
-          FocusInfoRow(
-              label: 'Durasi sesi',
-              value: '${session.focusMinutes} menit',
-              labelWidth: 96),
-          const SizedBox(height: 10),
-          FocusInfoRow(
-              label: 'Nama tugas',
-              value: widget.task.namaTugas,
-              labelWidth: 96),
-          const SizedBox(height: 10),
-          FocusInfoRow(
-              label: 'Target sesi',
-              value: session.targetText ?? '-',
-              labelWidth: 96),
-        ],
       ),
     );
   }

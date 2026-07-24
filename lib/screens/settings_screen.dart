@@ -3,13 +3,14 @@
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/task_provider.dart';
 import '../services/focus_session_provider.dart';
 import '../utils/app_theme.dart';
+import '../utils/app_assets.dart';
 import 'notification_settings_screen.dart';
-import 'schedule_settings_screen.dart';
 import 'focus/focus_history_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -24,7 +25,7 @@ class SettingsScreen extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 40),
           children: [
             const Text(
-              'Pengaturan',
+              'Profil',
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
@@ -39,8 +40,6 @@ class SettingsScreen extends StatelessWidget {
             _buildInfoCard(context),
             const SizedBox(height: 16),
             _buildNotifCard(context),
-            const SizedBox(height: 16),
-            _buildScheduleSettingsCard(context),
             const SizedBox(height: 16),
             _buildSAWInfoCard(),
             const SizedBox(height: 16),
@@ -146,24 +145,32 @@ class SettingsScreen extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Center(
-              child: Text('👨‍🎓', style: TextStyle(fontSize: 28)),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Image.asset(
+                AppAssets.logo,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const Icon(
+                    Icons.check_circle_rounded,
+                    size: 30,
+                    color: AppTheme.primary),
+              ),
             ),
           ),
           const SizedBox(width: 16),
           const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('TugasKu',
+              Text('Priora',
                   style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                       color: Colors.white)),
               SizedBox(height: 2),
-              Text('Manajemen Tugas Mahasiswa',
+              Text('Prioritaskan & selesaikan tugasmu',
                   style: TextStyle(color: Colors.white70, fontSize: 12)),
               SizedBox(height: 4),
               Text('Versi 1.0.0',
@@ -248,66 +255,6 @@ class SettingsScreen extends StatelessWidget {
     });
   }
 
-  Widget _buildScheduleSettingsCard(BuildContext context) {
-    return Consumer<TaskProvider>(builder: (ctx, provider, _) {
-      final config = provider.scheduleConfig;
-      final startStr =
-          '${config.workStartHour.toString().padLeft(2, '0')}:${config.workStartMinute.toString().padLeft(2, '0')}';
-      final endStr =
-          '${config.workEndHour.toString().padLeft(2, '0')}:${config.workEndMinute.toString().padLeft(2, '0')}';
-
-      return _buildCard('Penjadwalan', Icons.schedule_rounded, [
-        GestureDetector(
-          onTap: () => Navigator.push(
-            ctx,
-            MaterialPageRoute(builder: (_) => const ScheduleSettingsScreen()),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.access_time_rounded,
-                      color: AppTheme.primary, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Primary Work Hours',
-                          style: TextStyle(
-                              fontSize: 14, fontWeight: FontWeight.w600)),
-                      Text(
-                        'Jam kerja: $startStr – $endStr',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded,
-                    color: AppTheme.textSecondary),
-              ],
-            ),
-          ),
-        ),
-      ]);
-    });
-  }
-
   Widget _buildSAWInfoCard() {
     return _buildCard('Metode SAW', Icons.psychology_rounded, [
       const Text(
@@ -331,6 +278,8 @@ class SettingsScreen extends StatelessWidget {
         style: TextStyle(
             fontSize: 12, color: AppTheme.textSecondary, height: 1.4),
       ),
+      const SizedBox(height: 10),
+      _buildBackupStatus(),
       const SizedBox(height: 14),
       Row(
         children: [
@@ -368,6 +317,51 @@ class SettingsScreen extends StatelessWidget {
     ]);
   }
 
+  /// Pengingat halus soal pencadangan: hijau bila baru dicadangkan, kuning
+  /// bila sudah lama / belum pernah — supaya data tidak hilang saat app
+  /// dihapus/ganti HP.
+  Widget _buildBackupStatus() {
+    return Consumer<TaskProvider>(
+      builder: (context, provider, _) {
+        final last = provider.lastBackupAt;
+        final days =
+            last == null ? null : DateTime.now().difference(last).inDays;
+        final stale = last == null || (days != null && days >= 7);
+        final color = stale ? AppTheme.warning : AppTheme.success;
+        final text = last == null
+            ? 'Belum pernah dicadangkan — cadangkan agar data aman.'
+            : 'Terakhir dicadangkan: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(last)}';
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                  stale
+                      ? Icons.backup_outlined
+                      : Icons.verified_outlined,
+                  color: color,
+                  size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(text,
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: color)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _exportData(BuildContext context) async {
     final provider = context.read<TaskProvider>();
     try {
@@ -379,9 +373,10 @@ class SettingsScreen extends StatelessWidget {
       final file = XFile.fromData(
         bytes,
         mimeType: 'application/json',
-        name: 'tugasku_backup_$timestamp.json',
+        name: 'priora_backup_$timestamp.json',
       );
-      await Share.shareXFiles([file], text: 'Cadangan data TugasKu');
+      await Share.shareXFiles([file], text: 'Cadangan data Priora');
+      await provider.markBackupDone();
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -421,7 +416,7 @@ class SettingsScreen extends StatelessWidget {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('File bukan cadangan TugasKu yang valid'),
+                content: Text('File bukan cadangan Priora yang valid'),
                 backgroundColor: AppTheme.danger),
           );
         }
@@ -578,11 +573,15 @@ class SettingsScreen extends StatelessWidget {
               onPressed: () => Navigator.pop(c), child: const Text('Batal')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-            onPressed: () {
-              context.read<TaskProvider>().clearAllTasks();
+            onPressed: () async {
+              final provider = context.read<TaskProvider>();
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(c);
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Semua tugas telah dihapus'),
+              final ok = await provider.clearAllTasks();
+              messenger.showSnackBar(SnackBar(
+                  content: Text(ok
+                      ? 'Semua tugas telah dihapus'
+                      : 'Gagal menghapus — coba lagi'),
                   backgroundColor: AppTheme.danger));
             },
             child: const Text('Hapus Semua'),

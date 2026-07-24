@@ -7,13 +7,15 @@ import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'services/task_provider.dart';
 import 'services/focus_session_provider.dart';
+import 'models/task_model.dart';
+import 'models/focus_session_model.dart';
 import 'utils/app_theme.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/task_list_screen.dart';
 import 'screens/calendar_screen.dart';
 import 'screens/priority_screen.dart';
-import 'screens/schedule_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/focus/focus_timer_screen.dart';
 
 /// Kunci global supaya SnackBar bisa ditampilkan dari layar mana pun,
 /// termasuk setelah Navigator.pop() berpindah ke layar lain (mis. setelah
@@ -43,7 +45,7 @@ class TugasKuApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FocusSessionProvider()),
       ],
       child: MaterialApp(
-        title: 'TugasKu',
+        title: 'Priora',
         debugShowCheckedModeBanner: false,
         scaffoldMessengerKey: rootScaffoldMessengerKey,
         theme: AppTheme.theme,
@@ -62,6 +64,7 @@ class MainNavigation extends StatefulWidget {
 
   static const int dashboardTab = 0;
   static const int taskListTab = 1;
+  static const int calendarTab = 2;
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -72,7 +75,6 @@ class _MainNavigationState extends State<MainNavigation>
   final List<Widget> _screens = const [
     DashboardScreen(),
     TaskListScreen(),
-    ScheduleScreen(),
     CalendarScreen(),
     PriorityScreen(),
     SettingsScreen(),
@@ -95,13 +97,74 @@ class _MainNavigationState extends State<MainNavigation>
       (_) => context.read<TaskProvider>().refreshUrgensi(),
     );
     // Hubungkan FocusSessionProvider ke TaskProvider (untuk aksi notifikasi &
-    // akumulasi menit fokus tanpa BuildContext).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // akumulasi menit fokus tanpa BuildContext), lalu tawarkan melanjutkan
+    // sesi fokus yang mungkin terputus.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      context
-          .read<FocusSessionProvider>()
-          .attachTaskProvider(context.read<TaskProvider>());
+      final focus = context.read<FocusSessionProvider>();
+      focus.attachTaskProvider(context.read<TaskProvider>());
+      await focus.checkForRestorableSession();
+      if (!mounted) return;
+      final session = focus.restorableSession;
+      if (session != null) _promptResumeFocus(focus, session);
     });
+  }
+
+  Future<void> _promptResumeFocus(
+      FocusSessionProvider focus, FocusSession session) async {
+    // Saat startup, TaskProvider mungkin belum selesai memuat tugas dari
+    // penyimpanan. Tunggu hingga tugas terkait muncul (maks ~3 dtk) sebelum
+    // memutuskan — kalau tidak, tugas dianggap "hilang" dan sesi terbuang.
+    Task? task;
+    for (var i = 0; i < 30; i++) {
+      for (final t in context.read<TaskProvider>().tasks) {
+        if (t.id == session.taskId) {
+          task = t;
+          break;
+        }
+      }
+      if (task != null) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+    }
+    // Tugas benar-benar sudah tidak ada → buang sesi tanpa menawarkan.
+    if (task == null) {
+      focus.discardRestorableSession();
+      return;
+    }
+    if (!mounted) return;
+    final resumeTask = task;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Lanjutkan sesi fokus?'),
+        content: Text(
+            'Kamu punya sesi fokus yang belum selesai untuk "${resumeTask.namaTugas}".'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              focus.discardRestorableSession();
+              Navigator.pop(ctx);
+            },
+            child: const Text('Akhiri'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              focus.resumeRestorableSession();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                    builder: (_) => FocusTimerScreen(task: resumeTask)),
+              );
+            },
+            child: const Text('Lanjutkan'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -147,10 +210,9 @@ class _MainNavigationState extends State<MainNavigation>
           children: [
             _navItem(0, Icons.grid_view_rounded, Icons.grid_view_rounded, 'Dashboard'),
             _navItem(1, Icons.assignment_outlined, Icons.assignment, 'Tugas'),
-            _navItem(2, Icons.schedule_outlined, Icons.schedule, 'Jadwal'),
-            _navItem(3, Icons.calendar_month_outlined, Icons.calendar_month, 'Kalender'),
-            _navItem(4, Icons.psychology_outlined, Icons.psychology, 'Prioritas'),
-            _navItem(5, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
+            _navItem(2, Icons.calendar_month_outlined, Icons.calendar_month, 'Kalender'),
+            _navItem(3, Icons.psychology_outlined, Icons.psychology, 'Prioritas'),
+            _navItem(4, Icons.person_outline_rounded, Icons.person_rounded, 'Profil'),
           ],
         ),
       ),

@@ -1,7 +1,6 @@
 // lib/screens/focus/focus_timer_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/focus_session_model.dart';
 import '../../models/task_model.dart';
@@ -11,7 +10,6 @@ import '../../utils/app_theme.dart';
 import 'focus_complete_screen.dart';
 import 'focus_break_screen.dart';
 import 'focus_screen.dart';
-import 'widgets/focus_info_row.dart';
 
 /// Layar timer sesi fokus. Mode Fokus mengunci navigasi (PopScope); Mode
 /// Fleksibel membiarkan pengguna keluar. Seluruh logika timer ada di
@@ -121,10 +119,6 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final totalActive = context.read<TaskProvider>().activeTasks.length;
-    final priorityLabel =
-        AppTheme.getPrioritasLabel(widget.task.ranking, totalActive);
-
     return Consumer<FocusSessionProvider>(
       builder: (context, provider, _) {
         final session = provider.active;
@@ -169,8 +163,6 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
         final progress = total.inSeconds == 0
             ? 0.0
             : remaining.inSeconds / total.inSeconds;
-        final estimasi = DateFormat('HH:mm')
-            .format(DateTime.now().add(remaining));
 
         return PopScope(
           canPop: !locked,
@@ -181,43 +173,75 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
           child: Scaffold(
             backgroundColor: AppTheme.background,
             body: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 16),
-                    child: ConstrainedBox(
-                      constraints:
-                          BoxConstraints(minHeight: constraints.maxHeight),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _modeBadge(session),
-                          const SizedBox(height: 20),
-                          _buildRing(progress, remaining),
-                          const SizedBox(height: 20),
-                          _taskInfo(session, priorityLabel, estimasi,
-                              provider.currentSession),
-                          const SizedBox(height: 28),
-                          _controls(provider),
-                          const SizedBox(height: 8),
-                          TextButton.icon(
-                            onPressed: () => Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) =>
-                                    FocusScreen(task: widget.task),
-                              ),
-                            ),
-                            icon: const Icon(Icons.nightlight_round, size: 18),
-                            label: const Text('Layar Fokus'),
-                          ),
-                          const SizedBox(height: 4),
-                          _streakLabel(provider.focusStreak),
-                        ],
+              child: Column(
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: IconButton(
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => FocusScreen(task: widget.task),
+                        ),
                       ),
+                      icon: const Icon(Icons.nightlight_round),
+                      color: AppTheme.textSecondary,
+                      tooltip: 'Layar Fokus',
                     ),
-                  );
-                },
+                  ),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                                minHeight: constraints.maxHeight),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                _modeBadge(session),
+                                const SizedBox(height: 28),
+                                _buildRing(progress, remaining),
+                                const SizedBox(height: 28),
+                                Text(
+                                  widget.task.namaTugas,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textPrimary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Sesi ${provider.currentSession} dari ${session.totalSessions}',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppTheme.textSecondary),
+                                ),
+                                if (session.targetText != null) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    session.targetText!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                        fontSize: 13,
+                                        color: AppTheme.textSecondary),
+                                  ),
+                                ],
+                                const SizedBox(height: 36),
+                                _controls(provider),
+                                const SizedBox(height: 16),
+                                _streakLabel(provider.focusStreak),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -275,38 +299,6 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                 fontWeight: FontWeight.w800,
                 color: AppTheme.textPrimary),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _taskInfo(FocusSession session, String priorityLabel, String estimasi,
-      int currentSession) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        children: [
-          FocusInfoRow(label: 'Tugas', value: widget.task.namaTugas),
-          const SizedBox(height: 8),
-          FocusInfoRow(label: 'Kategori', value: widget.task.categoryLabel),
-          const SizedBox(height: 8),
-          FocusInfoRow(label: 'Prioritas', value: priorityLabel),
-          if (session.targetText != null) ...[
-            const SizedBox(height: 8),
-            FocusInfoRow(label: 'Target', value: session.targetText!),
-          ],
-          const SizedBox(height: 8),
-          FocusInfoRow(
-              label: 'Sesi',
-              value: 'Sesi $currentSession dari ${session.totalSessions}'),
-          const SizedBox(height: 8),
-          FocusInfoRow(label: 'Estimasi selesai', value: estimasi),
         ],
       ),
     );
@@ -373,7 +365,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
 
   Widget _streakLabel(int streak) {
     return Text(
-      streak > 0 ? '🔥 $streak Hari Fokus' : '🔥 Mulai streak fokusmu',
+      streak > 0 ? '$streak Hari Fokus' : 'Mulai streak fokusmu',
       style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
     );
   }

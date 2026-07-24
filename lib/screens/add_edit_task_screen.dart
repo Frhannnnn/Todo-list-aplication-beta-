@@ -1,6 +1,7 @@
 // lib/screens/add_edit_task_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../services/task_provider.dart';
@@ -44,6 +45,12 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   DateTime? _recurrenceEndDate;
   int? _recurrenceCount;
 
+  bool _isSaving = false;
+  bool _showAdvanced = false;
+  // Tanda tangan nilai form saat pertama dibuka, untuk mendeteksi perubahan
+  // yang belum disimpan (guard "Buang perubahan?").
+  String? _initialSignature;
+
   bool get isEdit => widget.task != null;
   bool get _isAkademik => _lingkupTugas == _kAkademikScope;
 
@@ -51,6 +58,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
   void initState() {
     super.initState();
     if (isEdit) {
+      // Saat mengedit, tampilkan seluruh opsi agar tidak ada yang tersembunyi.
+      _showAdvanced = true;
       final t = widget.task!;
       _namaTugasCtrl.text = t.namaTugas;
       _catatanCtrl.text = t.catatan ?? '';
@@ -87,9 +96,6 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     super.dispose();
   }
 
-  /// Urgensi dihitung otomatis dari deadline
-  int get _urgensiOtomatis => Task.hitungUrgensiDariDeadline(_deadline);
-
   @override
   Widget build(BuildContext context) {
     return Consumer<TaskProvider>(
@@ -97,7 +103,22 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         if (!isEdit && _lingkupTugas.isEmpty && provider.customScopes.isNotEmpty) {
           _lingkupTugas = provider.customScopes.first;
         }
-        return Scaffold(
+        // Rekam kondisi awal form sekali (setelah default lingkup terset).
+        _initialSignature ??= _formSignature();
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) async {
+            if (didPop || !mounted) return;
+            final nav = Navigator.of(context);
+            if (_formSignature() == _initialSignature) {
+              nav.pop();
+              return;
+            }
+            final discard = await _confirmDiscard();
+            if (!mounted || discard != true) return;
+            nav.pop();
+          },
+          child: Scaffold(
           backgroundColor: AppTheme.background,
           appBar: AppBar(
             title: Text(isEdit ? 'Edit Tugas' : 'Tambah Tugas'),
@@ -133,10 +154,15 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 _buildSection('Informasi Tugas', [
                   _buildTextField(_namaTugasCtrl, 'Nama Tugas',
                       Icons.assignment,
+                      // Fokus otomatis saat menambah tugas baru agar keyboard
+                      // langsung siap; jangan saat mengedit.
+                      autofocus: !isEdit,
                       validator: (v) =>
                           v!.isEmpty ? 'Wajib diisi' : null),
                   const SizedBox(height: 12),
                   _buildLingkupDropdown(provider),
+                  const SizedBox(height: 12),
+                  _buildKategoriDropdown(provider),
                   if (_isAkademik) ...[
                     const SizedBox(height: 12),
                     _buildTextField(
@@ -145,55 +171,93 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 ]),
                 const SizedBox(height: 16),
                 _buildSection('Deadline', [
+                  _buildDeadlinePresets(),
+                  const SizedBox(height: 12),
                   _buildDeadlinePicker(),
-                  const SizedBox(height: 10),
-                  _buildUrgensiIndicator(),
                 ]),
                 const SizedBox(height: 16),
-                _buildSection('Pengulangan', [
-                  _buildRecurrencePicker(),
+                _buildSection('Prioritas', [
+                  _buildPrioritasPicker(),
                 ]),
                 const SizedBox(height: 16),
-                _buildSection('Kategori', [
-                  _buildKategoriDropdown(provider),
-                ]),
-                const SizedBox(height: 16),
-                _buildSection('Parameter SAW', [
-                  _buildKepentinganSlider(),
-                  const SizedBox(height: 12),
-                  _buildEisenhowerSummary(),
-                  const SizedBox(height: 12),
-                  _buildSlider(
-                    'Estimasi Waktu (jam)',
-                    _estimasiWaktu,
-                    (v) => setState(() => _estimasiWaktu = v.round()),
-                    hint: 'Berapa jam yang dibutuhkan?',
-                    max: 10,
-                  ),
-                ]),
-                const SizedBox(height: 16),
-                _buildSection('Status', [_buildStatusSelector()]),
-                const SizedBox(height: 16),
-                _buildSection('Notifikasi', [_buildNotifSection()]),
-                const SizedBox(height: 16),
-                _buildSection('Catatan', [_buildCatatanField()]),
+                _buildAdvancedToggle(),
+                if (_showAdvanced) ...[
+                  const SizedBox(height: 16),
+                  _buildSection('Pengulangan', [
+                    _buildRecurrencePicker(),
+                  ]),
+                  if (isEdit) ...[
+                    const SizedBox(height: 16),
+                    _buildSection('Status', [_buildStatusSelector()]),
+                  ],
+                  const SizedBox(height: 16),
+                  _buildSection('Notifikasi', [
+                    _buildNotifToggle(provider.notifEnabled),
+                  ]),
+                  const SizedBox(height: 16),
+                  _buildSection('Catatan', [_buildCatatanField()]),
+                ],
                 const SizedBox(height: 24),
                 ElevatedButton(
-                  onPressed: _save,
+                  onPressed: _isSaving ? null : _save,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      isEdit ? 'Simpan Perubahan' : 'Tambah Tugas',
-                      style: const TextStyle(fontSize: 16),
-                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : Text(
+                            isEdit ? 'Simpan Perubahan' : 'Tambah Tugas',
+                            style: const TextStyle(fontSize: 16),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 40),
               ],
             ),
           ),
+          ),
         );
       },
+    );
+  }
+
+  /// Tombol lipat opsi lanjutan. Untuk tugas baru, bagian teknis (pengulangan,
+  /// parameter SAW, status, notifikasi, catatan) disembunyikan agar pengguna
+  /// cukup mengisi nama, deadline, dan kategori. Nilai default sudah memadai.
+  Widget _buildAdvancedToggle() {
+    return InkWell(
+      onTap: () => setState(() => _showAdvanced = !_showAdvanced),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.tune_rounded, color: AppTheme.primary, size: 20),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text('Opsi lanjutan',
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primary)),
+            ),
+            Icon(
+                _showAdvanced
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                color: AppTheme.textSecondary),
+          ],
+        ),
+      ),
     );
   }
 
@@ -222,10 +286,12 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
 
   Widget _buildTextField(TextEditingController ctrl, String label,
       IconData icon,
-      {String? Function(String?)? validator}) {
+      {String? Function(String?)? validator, bool autofocus = false}) {
     return TextFormField(
       controller: ctrl,
       validator: validator,
+      autofocus: autofocus,
+      textCapitalization: TextCapitalization.sentences,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: AppTheme.primary),
@@ -266,7 +332,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Lingkup Tugas',
-              prefixIcon: Icon(Icons.label_outline, color: AppTheme.primary),
+              prefixIcon:
+                  Icon(Icons.label_outline, color: AppTheme.primary),
             ),
             items: scopes
                 .map((s) => DropdownMenuItem(
@@ -280,20 +347,66 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
                 // Kategori independen per lingkup (Issue #4) — reset ke
                 // kategori pertama milik lingkup baru saat lingkup diganti.
                 final catsForNewScope = provider.categoriesForScope(v);
-                _category = catsForNewScope.isNotEmpty
-                    ? catsForNewScope.first
-                    : '';
+                _category =
+                    catsForNewScope.isNotEmpty ? catsForNewScope.first : '';
               });
             },
           ),
         ),
-        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
           tooltip: 'Tambah lingkup baru',
           onPressed: () => _showAddScopeDialog(provider),
         ),
+        IconButton(
+          icon: const Icon(Icons.tune_rounded, color: AppTheme.textSecondary),
+          tooltip: 'Kelola lingkup',
+          onPressed: () => _showManageScopes(provider),
+        ),
       ],
+    );
+  }
+
+  void _showManageScopes(TaskProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ManageValuesSheet(
+        title: 'Kelola Lingkup Tugas',
+        subtitle: 'Tambah, ganti nama, atau hapus lingkup.',
+        addHint: 'Nama lingkup baru...',
+        getItems: () => provider.customScopes,
+        onAdd: (t) => provider.addScope(t),
+        onRename: (o, n) => provider.renameScope(o, n),
+        onDelete: (s) => provider.removeScope(s),
+        deleteGuard: (s) {
+          final n = provider.getTasksByScope(s).length;
+          if (n > 0) {
+            return 'Lingkup "$s" masih dipakai $n tugas. Pindahkan tugasnya dulu.';
+          }
+          if (provider.customScopes.length <= 1) {
+            return 'Minimal harus ada satu lingkup.';
+          }
+          return null;
+        },
+        onChanged: () {
+          if (!mounted) return;
+          setState(() {
+            final scopes = provider.customScopes;
+            if (scopes.isNotEmpty && !scopes.contains(_lingkupTugas)) {
+              _lingkupTugas = scopes.first;
+            }
+            final cats = provider.categoriesForScope(_lingkupTugas);
+            if (cats.isNotEmpty && !cats.contains(_category)) {
+              _category = cats.first;
+            }
+          });
+        },
+      ),
     );
   }
 
@@ -364,7 +477,6 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
             onChanged: (v) => setState(() => _category = v!),
           ),
         ),
-        const SizedBox(width: 8),
         IconButton(
           icon: const Icon(Icons.add_circle_outline, color: AppTheme.primary),
           tooltip: 'Tambah kategori baru',
@@ -372,10 +484,44 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
         ),
         IconButton(
           icon: const Icon(Icons.tune_rounded, color: AppTheme.textSecondary),
-          tooltip: 'Kelola kategori lingkup ini',
-          onPressed: () => _showCategoryManagerSheet(provider),
+          tooltip: 'Kelola kategori',
+          onPressed: () => _showManageCategories(provider),
         ),
       ],
+    );
+  }
+
+  void _showManageCategories(TaskProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _ManageValuesSheet(
+        title: 'Kelola Kategori',
+        subtitle: 'Kategori untuk lingkup "$_lingkupTugas".',
+        addHint: 'Nama kategori baru...',
+        getItems: () => provider.categoriesForScope(_lingkupTugas),
+        onAdd: (t) => provider.addCategoryToScope(_lingkupTugas, t),
+        onRename: (o, n) =>
+            provider.renameCategoryInScope(_lingkupTugas, o, n),
+        onDelete: (c) => provider.removeCategoryFromScope(_lingkupTugas, c),
+        deleteGuard: (c) =>
+            provider.categoriesForScope(_lingkupTugas).length <= 1
+                ? 'Minimal harus ada satu kategori.'
+                : null,
+        onChanged: () {
+          if (!mounted) return;
+          setState(() {
+            final cats = provider.categoriesForScope(_lingkupTugas);
+            if (cats.isNotEmpty && !cats.contains(_category)) {
+              _category = cats.first;
+            }
+          });
+        },
+      ),
     );
   }
 
@@ -394,20 +540,62 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     }
   }
 
-  void _showCategoryManagerSheet(TaskProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => _CategoryManagerSheet(
-        provider: provider,
-        scope: _lingkupTugas,
-        currentCategory: _category,
-        onCategoriesChanged: (validCategory) {
-          if (mounted) setState(() => _category = validCategory);
-        },
+  /// Pintasan deadline umum agar tak perlu selalu buka date+time picker.
+  /// Menyetel tanggal ke pukul 23:59 (akhir hari) sebagai konvensi deadline.
+  Widget _buildDeadlinePresets() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final presets = <(String, DateTime)>[
+      ('Hari ini', today),
+      ('Besok', today.add(const Duration(days: 1))),
+      ('3 hari', today.add(const Duration(days: 3))),
+      ('Minggu depan', today.add(const Duration(days: 7))),
+    ];
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: presets.map((p) {
+          final target = DateTime(p.$2.year, p.$2.month, p.$2.day, 23, 59);
+          final selected = _deadline.year == target.year &&
+              _deadline.month == target.month &&
+              _deadline.day == target.day &&
+              _deadline.hour == 23 &&
+              _deadline.minute == 59;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  setState(() => _deadline = target);
+                },
+                child: Container(
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppTheme.primary.withValues(alpha: 0.1)
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: selected ? AppTheme.primary : AppTheme.border,
+                        width: selected ? 1.5 : 1),
+                  ),
+                  child: Text(
+                    p.$1,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          selected ? AppTheme.primary : AppTheme.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
@@ -451,318 +639,118 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
           children: [
             const Icon(Icons.calendar_today, color: AppTheme.primary),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Deadline',
-                    style: TextStyle(
-                        fontSize: 12, color: AppTheme.textSecondary)),
-                Text(
-                  DateFormat('EEEE, d MMMM yyyy - HH:mm', 'id_ID')
-                      .format(_deadline),
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.textPrimary),
-                ),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Deadline',
+                      style: TextStyle(
+                          fontSize: 12, color: AppTheme.textSecondary)),
+                  Text(
+                    DateFormat('EEEE, d MMMM yyyy - HH:mm', 'id_ID')
+                        .format(_deadline),
+                    style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.textPrimary),
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
-            const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+            const SizedBox(width: 8),
+            _buildUrgensiBadge(),
           ],
         ),
       ),
     );
   }
 
-  /// Badge urgensi otomatis berdasarkan deadline
-  Widget _buildUrgensiIndicator() {
+  /// Badge kecil urgensi otomatis berdasarkan deadline.
+  Widget _buildUrgensiBadge() {
     final sisa = _deadline.difference(DateTime.now()).inHours;
     String label;
     Color color;
-    IconData icon;
 
     if (sisa <= 0) {
-      label = 'Sudah Lewat Deadline';
+      label = 'Lewat';
       color = AppTheme.danger;
-      icon = Icons.error_rounded;
     } else if (sisa <= 3) {
-      label = '🔴 Sangat Mendesak (< 3 jam)';
+      label = '< 3 jam';
       color = AppTheme.danger;
-      icon = Icons.warning_rounded;
     } else if (sisa <= 24) {
-      label = '🟠 Mendesak (< 24 jam)';
+      label = '< 24 jam';
       color = const Color(0xFFF97316);
-      icon = Icons.access_time_rounded;
     } else if (sisa <= 72) {
-      label = '🟡 Perlu Perhatian (< 3 hari)';
+      label = '< 3 hari';
       color = AppTheme.warning;
-      icon = Icons.schedule_rounded;
     } else if (sisa <= 168) {
-      label = '🟢 Masih Aman (< 7 hari)';
+      label = '< 7 hari';
       color = AppTheme.success;
-      icon = Icons.check_circle_outline_rounded;
     } else {
-      label = '✅ Santai (> 7 hari)';
+      label = 'Santai';
       color = AppTheme.success;
-      icon = Icons.sentiment_satisfied_rounded;
     }
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSlider(String label, int value, ValueChanged<double> onChanged,
-      {String? hint, int max = 5}) {
-    final labels = {
-      1: 'Sangat Rendah',
-      2: 'Rendah',
-      3: 'Sedang',
-      4: 'Tinggi',
-      5: 'Sangat Tinggi',
-    };
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.textPrimary)),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                max == 5
-                    ? (labels[value] ?? '-')
-                    : '$value jam',
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primary),
-              ),
-            ),
-          ],
-        ),
-        if (hint != null)
-          Text(hint,
-              style: const TextStyle(
-                  fontSize: 11, color: AppTheme.textSecondary)),
-        Slider(
-          value: value.toDouble(),
-          min: 1,
-          max: max.toDouble(),
-          divisions: max - 1,
-          activeColor: AppTheme.primary,
-          onChanged: onChanged,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildKepentinganSlider() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Tingkat Kepentingan',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary),
-            ),
-            const SizedBox(width: 4),
-            GestureDetector(
-              onTap: () => showDialog(
-                context: context,
-                builder: (c) => AlertDialog(
-                  title: const Text('Tingkat Kepentingan'),
-                  content: const Text(
-                    'Kepentingan = seberapa besar dampak tugas ini terhadap nilai atau tujuan akademikmu. '
-                    'Contoh: tugas UAS lebih penting dari tugas mingguan biasa.',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(c),
-                      child: const Text('Mengerti'),
-                    ),
-                  ],
-                ),
-              ),
-              child: const Icon(Icons.info_outline,
-                  size: 16, color: AppTheme.textSecondary),
-            ),
-            const Spacer(),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                AppTheme.getLabelSlider(_kepentingan),
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.primary),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Dampak jangka panjang terhadap tujuan akademik',
-          style:
-              TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-        ),
-        Slider(
-          value: _kepentingan.toDouble(),
-          min: 1,
-          max: 5,
-          divisions: 4,
-          activeColor: AppTheme.primary,
-          onChanged: (v) => setState(() => _kepentingan = v.round()),
-        ),
-        const Text(
-          '💡 Penting ≠ Mendesak: penting = berdampak besar pada nilai/tujuan; mendesak = deadline dekat',
-          style:
-              TextStyle(fontSize: 11, color: AppTheme.textSecondary),
-        ),
-      ],
-    );
-  }
-
-  Color _getEisenhowerColor(String label) {
-    if (label.contains('Kerjakan Sekarang')) return const Color(0xFFEF4444);
-    if (label.contains('Jadwalkan')) return const Color(0xFF2563EB);
-    if (label.contains('Delegasikan')) return const Color(0xFFF59E0B);
-    return const Color(0xFF94A3B8);
-  }
-
-  Widget _buildEisenhowerSummary() {
-    final label =
-        AppTheme.getEisenhowerLabel(_kepentingan, _urgensiOtomatis);
-    final color = _getEisenhowerColor(label);
-
-    return Container(
-      width: double.infinity,
-      padding:
-          const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration:
-                BoxDecoration(color: color, shape: BoxShape.circle),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '📊 $label',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: color.withValues(alpha: 0.9)),
-            ),
-          ),
-        ],
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
       ),
     );
   }
 
-  Widget _buildStatusSelector() {
+  /// Pemilih prioritas ringkas (Rendah/Sedang/Tinggi) menggantikan slider
+  /// Kepentingan + Estimasi + ringkasan Eisenhower. Nilainya dipetakan ke
+  /// tingkat kepentingan SAW; estimasi memakai nilai default. SAW tetap
+  /// mengurutkan tugas dari urgensi (deadline) + kepentingan ini.
+  Widget _buildPrioritasPicker() {
+    const options = [
+      ('Rendah', 2),
+      ('Sedang', 3),
+      ('Tinggi', 5),
+    ];
+    final selectedLevel =
+        _kepentingan <= 2 ? 2 : (_kepentingan >= 4 ? 5 : 3);
     return Row(
-      children: TaskStatus.values.map((s) {
-        final labels = [
-          'Belum\nDikerjakan',
-          'Sedang\nDikerjakan',
-          'Selesai'
-        ];
-        final icons = [
-          Icons.radio_button_unchecked,
-          Icons.access_time,
-          Icons.check_circle
-        ];
-        final colors = [
-          AppTheme.textSecondary,
-          AppTheme.warning,
-          AppTheme.success
-        ];
-        final isSelected = _status == s;
+      children: options.map((opt) {
+        final selected = selectedLevel == opt.$2;
         return Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _status = s),
-            child: Container(
-              margin: const EdgeInsets.only(right: 6),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? colors[s.index].withValues(alpha: 0.1)
-                    : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: isSelected ? colors[s.index] : AppTheme.border,
-                  width: isSelected ? 2 : 1,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: GestureDetector(
+              onTap: () => setState(() => _kepentingan = opt.$2),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AppTheme.primary.withValues(alpha: 0.1)
+                      : Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: selected ? AppTheme.primary : AppTheme.border,
+                    width: selected ? 1.5 : 1,
+                  ),
                 ),
-              ),
-              child: Column(
-                children: [
-                  Icon(icons[s.index],
-                      color: isSelected
-                          ? colors[s.index]
-                          : AppTheme.textSecondary,
-                      size: 20),
-                  const SizedBox(height: 4),
-                  Text(labels[s.index],
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: isSelected
-                              ? FontWeight.w700
-                              : FontWeight.normal,
-                          color: isSelected
-                              ? colors[s.index]
-                              : AppTheme.textSecondary)),
-                ],
+                child: Text(
+                  opt.$1,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color:
+                        selected ? AppTheme.primary : AppTheme.textSecondary,
+                  ),
+                ),
               ),
             ),
           ),
@@ -771,76 +759,112 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
-  Widget _buildNotifSection() {
-    const scheduleOptions = [
-      ('h-3', 'H-3 hari'),
-      ('h-1', 'H-1 hari'),
-      ('3jam', '3 jam sebelum'),
-      ('deadline', 'Tepat deadline'),
+  Widget _buildStatusSelector() {
+    const labels = ['Belum\nDikerjakan', 'Sedang\nDikerjakan', 'Selesai'];
+    const icons = [
+      Icons.radio_button_unchecked,
+      Icons.access_time,
+      Icons.check_circle
     ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SwitchListTile(
-          value: _notifEnabled,
-          onChanged: (v) => setState(() => _notifEnabled = v),
-          activeThumbColor: AppTheme.primary,
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Aktifkan Notifikasi',
-              style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary)),
-          subtitle: Text(
-            _notifEnabled
-                ? 'Notifikasi aktif untuk tugas ini'
-                : 'Notifikasi dimatikan untuk tugas ini',
-            style: const TextStyle(
-                fontSize: 11, color: AppTheme.textSecondary),
-          ),
-        ),
-        if (_notifEnabled) ...[
-          const SizedBox(height: 8),
-          const Text('Kirim pengingat pada:',
-              style: TextStyle(
-                  fontSize: 12, color: AppTheme.textSecondary)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: scheduleOptions.map(((String key, String label) opt) {
-              final isSelected = _notifSchedule.contains(opt.$1);
-              return FilterChip(
-                label: Text(opt.$2,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: isSelected
-                            ? AppTheme.primary
-                            : AppTheme.textSecondary)),
-                selected: isSelected,
-                onSelected: (v) {
-                  setState(() {
-                    if (v) {
-                      _notifSchedule.add(opt.$1);
-                    } else {
-                      _notifSchedule.remove(opt.$1);
-                    }
-                  });
-                },
-                selectedColor: AppTheme.primary.withValues(alpha: 0.1),
-                checkmarkColor: AppTheme.primary,
-                side: BorderSide(
+    const colors = [AppTheme.textSecondary, AppTheme.warning, AppTheme.success];
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: TaskStatus.values.map((s) {
+          final isSelected = _status == s;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3),
+              child: GestureDetector(
+                onTap: () => setState(() => _status = s),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.primary
-                        : AppTheme.border),
-                backgroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-              );
-            }).toList(),
-          ),
-        ],
-      ],
+                        ? colors[s.index].withValues(alpha: 0.1)
+                        : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected ? colors[s.index] : AppTheme.border,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icons[s.index],
+                          color: isSelected
+                              ? colors[s.index]
+                              : AppTheme.textSecondary,
+                          size: 20),
+                      const SizedBox(height: 4),
+                      Text(labels[s.index],
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.normal,
+                              color: isSelected
+                                  ? colors[s.index]
+                                  : AppTheme.textSecondary)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  /// Sakelar notifikasi khusus tugas ini. Ini bawahan dari sakelar global di
+  /// Profil → Notifikasi: kalau global mati ([globalEnabled] false), notifikasi
+  /// tugas apa pun tidak dikirim, jadi sakelar per-tugas dinonaktifkan agar
+  /// tidak berbenturan/menyesatkan. Jadwal pengingat memakai default (H-1,
+  /// 3 jam sebelum, tepat deadline).
+  Widget _buildNotifToggle(bool globalEnabled) {
+    if (!globalEnabled) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.warning.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.notifications_off_rounded,
+                color: AppTheme.warning, size: 18),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Notifikasi dimatikan untuk semua tugas di Profil → Notifikasi. '
+                'Aktifkan di sana dulu untuk mengatur notifikasi per tugas.',
+                style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return SwitchListTile(
+      value: _notifEnabled,
+      onChanged: (v) => setState(() => _notifEnabled = v),
+      activeThumbColor: AppTheme.primary,
+      contentPadding: EdgeInsets.zero,
+      title: const Text('Notifikasi tugas ini',
+          style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary)),
+      subtitle: Text(
+        _notifEnabled
+            ? 'Pengingat H-1, 3 jam sebelum, & tepat deadline'
+            : 'Notifikasi dimatikan untuk tugas ini saja',
+        style: const TextStyle(fontSize: 11, color: AppTheme.textSecondary),
+      ),
     );
   }
 
@@ -1235,7 +1259,53 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     );
   }
 
+  /// Ringkasan seluruh nilai form untuk mendeteksi perubahan belum tersimpan.
+  String _formSignature() => [
+        _namaTugasCtrl.text,
+        _catatanCtrl.text,
+        _mataKuliahCtrl.text,
+        _deadline.toIso8601String(),
+        _kepentingan,
+        _estimasiWaktu,
+        _lingkupTugas,
+        _category,
+        _status.index,
+        _notifEnabled,
+        _notifSchedule.join(','),
+        _recurrence.index,
+        _recurrenceInterval,
+        _recurrenceUnit.index,
+        _recurrenceEndDate?.toIso8601String() ?? '',
+        _recurrenceCount ?? '',
+      ].join('|');
+
+  Future<bool?> _confirmDiscard() {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Buang perubahan?'),
+        content: const Text('Perubahan yang belum disimpan akan hilang.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Buang'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _save() async {
+    // Cegah tugas terdaftar dua kali akibat tap ganda pada tombol simpan
+    // saat proses async (scheduler/penyimpanan) masih berjalan.
+    if (_isSaving) return;
     if (!_formKey.currentState!.validate()) return;
 
     // Validate lingkupTugas
@@ -1247,6 +1317,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
       );
       return;
     }
+
+    setState(() => _isSaving = true);
 
     final provider = context.read<TaskProvider>();
     final mataKuliah =
@@ -1306,7 +1378,8 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     if (!saved) {
       // Gagal simpan tidak boleh diam-diam (Issue #7) — tetap di form
       // supaya input user tidak hilang, dan beri tahu jelas bahwa harus
-      // dicoba lagi.
+      // dicoba lagi. Buka kunci tombol agar user bisa mencoba ulang.
+      setState(() => _isSaving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Gagal menyimpan — coba lagi'),
@@ -1480,30 +1553,38 @@ class _AddNameDialogState extends State<_AddNameDialog> {
   }
 }
 
-/// Bottom sheet "Kelola Kategori" — kategori di sini selalu milik satu
-/// [scope] tertentu (Issue #4: kategori independen per lingkup, tidak
-/// dibagi-pakai). Mendukung tambah, ganti nama (cascade ke semua tugas di
-/// lingkup ini), dan hapus.
-class _CategoryManagerSheet extends StatefulWidget {
-  final TaskProvider provider;
-  final String scope;
-  final String currentCategory;
-  final ValueChanged<String> onCategoriesChanged;
+/// Bottom sheet generik untuk mengelola daftar nilai (lingkup/kategori):
+/// tambah, ganti nama, dan hapus — dengan penjaga hapus opsional. Sengaja
+/// sederhana & dapat dipakai ulang lewat callback.
+class _ManageValuesSheet extends StatefulWidget {
+  final String title;
+  final String subtitle;
+  final String addHint;
+  final List<String> Function() getItems;
+  final Future<void> Function(String) onAdd;
+  final Future<bool> Function(String oldName, String newName) onRename;
+  final Future<void> Function(String) onDelete;
+  final String? Function(String)? deleteGuard;
+  final VoidCallback onChanged;
 
-  const _CategoryManagerSheet({
-    required this.provider,
-    required this.scope,
-    required this.currentCategory,
-    required this.onCategoriesChanged,
+  const _ManageValuesSheet({
+    required this.title,
+    required this.subtitle,
+    required this.addHint,
+    required this.getItems,
+    required this.onAdd,
+    required this.onRename,
+    required this.onDelete,
+    required this.onChanged,
+    this.deleteGuard,
   });
 
   @override
-  State<_CategoryManagerSheet> createState() => _CategoryManagerSheetState();
+  State<_ManageValuesSheet> createState() => _ManageValuesSheetState();
 }
 
-class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
+class _ManageValuesSheetState extends State<_ManageValuesSheet> {
   final _ctrl = TextEditingController();
-  late String _trackedCategory = widget.currentCategory;
 
   @override
   void dispose() {
@@ -1511,14 +1592,48 @@ class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
     super.dispose();
   }
 
+  Future<void> _add() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty) return;
+    await widget.onAdd(text);
+    _ctrl.clear();
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
+
+  Future<void> _rename(String old) async {
+    final result = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => RenameDialog(
+        title: 'Ganti Nama',
+        initialValue: old,
+        onSubmit: (newName) => widget.onRename(old, newName),
+      ),
+    );
+    if (result != null && mounted) {
+      setState(() {});
+      widget.onChanged();
+    }
+  }
+
+  Future<void> _delete(String item) async {
+    final blocked = widget.deleteGuard?.call(item);
+    if (blocked != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(blocked), backgroundColor: AppTheme.warning));
+      return;
+    }
+    await widget.onDelete(item);
+    if (mounted) setState(() {});
+    widget.onChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final categories = widget.provider.categoriesForScope(widget.scope);
-
+    final items = widget.getItems();
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Container(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
         child: Column(
@@ -1536,62 +1651,67 @@ class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Kelola Kategori',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.textPrimary,
-              ),
-            ),
+            Text(widget.title,
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary)),
             const SizedBox(height: 4),
-            Text(
-              'Kategori khusus untuk lingkup "${widget.scope}" — tidak dibagi dengan lingkup lain.',
-              style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-            ),
+            Text(widget.subtitle,
+                style: const TextStyle(
+                    fontSize: 13, color: AppTheme.textSecondary)),
             const SizedBox(height: 16),
-            if (categories.isEmpty)
+            if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  'Belum ada kategori. Tambahkan di bawah.',
-                  style: TextStyle(color: AppTheme.textSecondary),
-                ),
+                child: Text('Belum ada. Tambahkan di bawah.',
+                    style: TextStyle(color: AppTheme.textSecondary)),
               )
             else
-              ...categories.map((cat) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.category_outlined,
-                          color: AppTheme.primary, size: 18),
-                    ),
-                    title: Text(cat,
-                        style: const TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w500)),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.edit_outlined,
-                              color: AppTheme.textSecondary, size: 20),
-                          tooltip: 'Ganti nama',
-                          onPressed: () => _renameCategory(cat),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline_rounded,
-                              color: AppTheme.danger, size: 20),
-                          tooltip: 'Hapus',
-                          onPressed: () => _deleteCategory(cat),
-                        ),
-                      ],
-                    ),
-                  )),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: items
+                        .map((it) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.label_outline_rounded,
+                                    color: AppTheme.primary, size: 18),
+                              ),
+                              title: Text(it,
+                                  style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500)),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined,
+                                        color: AppTheme.textSecondary, size: 20),
+                                    tooltip: 'Ganti nama',
+                                    onPressed: () => _rename(it),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                        Icons.delete_outline_rounded,
+                                        color: AppTheme.danger,
+                                        size: 20),
+                                    tooltip: 'Hapus',
+                                    onPressed: () => _delete(it),
+                                  ),
+                                ],
+                              ),
+                            ))
+                        .toList(),
+                  ),
+                ),
+              ),
             const Divider(height: 24),
             Row(
               children: [
@@ -1599,7 +1719,7 @@ class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
                   child: TextField(
                     controller: _ctrl,
                     decoration: InputDecoration(
-                      hintText: 'Nama kategori baru...',
+                      hintText: widget.addHint,
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
@@ -1618,12 +1738,12 @@ class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
                       filled: true,
                       fillColor: Colors.white,
                     ),
-                    onSubmitted: (_) => _addCategory(),
+                    onSubmitted: (_) => _add(),
                   ),
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: _addCategory,
+                  onPressed: _add,
                   style: ElevatedButton.styleFrom(
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
@@ -1639,52 +1759,5 @@ class _CategoryManagerSheetState extends State<_CategoryManagerSheet> {
       ),
     );
   }
-
-  void _addCategory() {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty) return;
-    widget.provider.addCategoryToScope(widget.scope, text);
-    _ctrl.clear();
-    setState(() {});
-    _syncSelection();
-  }
-
-  Future<void> _deleteCategory(String cat) async {
-    await widget.provider.removeCategoryFromScope(widget.scope, cat);
-    if (!mounted) return;
-    setState(() {});
-    _syncSelection();
-  }
-
-  Future<void> _renameCategory(String oldCat) async {
-    final result = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => RenameDialog(
-        title: 'Ganti Nama Kategori',
-        initialValue: oldCat,
-        onSubmit: (newName) => widget.provider
-            .renameCategoryInScope(widget.scope, oldCat, newName),
-      ),
-    );
-    if (result != null && mounted) {
-      // Kalau yang di-rename adalah kategori yang sedang dipilih di form,
-      // ikutkan supaya form tetap menunjuk kategori yang sama (nama baru).
-      if (_trackedCategory == oldCat) _trackedCategory = result;
-      setState(() {});
-      _syncSelection();
-    }
-  }
-
-  /// Pastikan kategori yang sedang "dipegang" tetap valid (masih ada di
-  /// daftar kategori lingkup ini); kalau sudah dihapus, jatuh ke kategori
-  /// pertama yang tersisa. Kategori lain yang tidak terkait tidak
-  /// memengaruhi pilihan form sama sekali.
-  void _syncSelection() {
-    final categories = widget.provider.categoriesForScope(widget.scope);
-    if (!categories.contains(_trackedCategory)) {
-      _trackedCategory = categories.isNotEmpty ? categories.first : '';
-    }
-    widget.onCategoriesChanged(_trackedCategory);
-  }
 }
+

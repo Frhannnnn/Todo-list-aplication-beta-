@@ -1,6 +1,7 @@
 // lib/utils/task_status_actions.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/task_model.dart';
 import '../models/focus_session_model.dart';
 import '../services/task_provider.dart';
@@ -8,6 +9,7 @@ import '../screens/focus/focus_mode_sheet.dart';
 import '../screens/focus/focus_intent_dialog.dart';
 import '../screens/focus/focus_preparation_screen.dart';
 import 'app_theme.dart';
+import 'celebration.dart';
 import 'focus_recommendation.dart';
 
 /// Terapkan perubahan status tugas dari kartu tugas (tombol "Mulai" /
@@ -24,6 +26,9 @@ void handleStatusChange(
 
   if (newStatus == TaskStatus.sedangDikerjakan) {
     _startFocusFlow(context, provider, task);
+  } else if (newStatus == TaskStatus.selesai) {
+    // Rayakan penyelesaian: getar + animasi centang singkat.
+    celebrateTaskCompletion(context);
   }
 }
 
@@ -37,6 +42,9 @@ Future<void> _startFocusFlow(
 
   final target = await showFocusIntentDialog(context);
   if (target == null || !context.mounted) return; // dibatalkan
+
+  // Getar saat sesi fokus benar-benar dimulai.
+  HapticFeedback.mediumImpact();
 
   final totalActive = provider.activeTasks.length;
   final priorityLabel = AppTheme.getPrioritasLabel(task.ranking, totalActive);

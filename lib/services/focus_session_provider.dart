@@ -46,6 +46,10 @@ class FocusSessionProvider with ChangeNotifier {
   bool get hasNextSession =>
       _active != null && _currentSession < _active!.totalSessions;
 
+  // Sesi tersimpan yang bisa ditawarkan untuk dilanjutkan saat app dibuka.
+  ActiveSessionSnapshot? _pendingRestore;
+  FocusSession? get restorableSession => _pendingRestore?.session;
+
   FocusSessionProvider() {
     _timer.onTick = (d) {
       _remaining = d;
@@ -254,6 +258,68 @@ class FocusSessionProvider with ChangeNotifier {
       _updateNotification();
       notifyListeners();
     }
+  }
+
+  /// Periksa sesi fokus tersimpan yang belum selesai (dipanggil sekali saat
+  /// app dibuka). Hanya menandai agar UI bisa menawarkan "Lanjutkan?".
+  Future<void> checkForRestorableSession() async {
+    if (_active != null) return; // sudah ada sesi aktif di memori
+    final snap = await _repo.loadActive();
+    if (snap == null) return;
+    final s = snap.state;
+    final resumable = s == FocusSessionState.running ||
+        s == FocusSessionState.paused ||
+        s == FocusSessionState.breakTime;
+    if (!resumable) {
+      await _repo.clearActive();
+      return;
+    }
+    _pendingRestore = snap;
+    notifyListeners();
+  }
+
+  /// Pulihkan sesi tersimpan lalu lanjutkan timernya dari sisa waktu.
+  void resumeRestorableSession() {
+    final snap = _pendingRestore;
+    if (snap == null) return;
+    _pendingRestore = null;
+
+    _active = snap.session;
+    _currentSession = snap.currentSession;
+    _accumulatedFocusMinutes = snap.accumulatedFocusMinutes;
+    _state = snap.state;
+
+    Duration remaining;
+    if (snap.endAtEpochMs != null) {
+      final end = DateTime.fromMillisecondsSinceEpoch(snap.endAtEpochMs!);
+      final left = end.difference(DateTime.now());
+      remaining = left.isNegative ? Duration.zero : left;
+    } else {
+      remaining = Duration(seconds: snap.remainingSeconds);
+    }
+    _remaining = remaining;
+
+    if (_state == FocusSessionState.paused) {
+      // Pertahankan keadaan jeda dengan sisa waktu tersimpan.
+      _timer.resumeWith(remaining);
+      _timer.pause();
+    } else if (remaining <= Duration.zero) {
+      // Waktu sudah habis saat app tertutup → selesaikan blok.
+      _handleTimerFinished();
+      return;
+    } else {
+      _timer.resumeWith(remaining);
+    }
+    _updateNotification();
+    _applyWakelock();
+    notifyListeners();
+  }
+
+  /// Buang sesi tersimpan (pengguna memilih tidak melanjutkan).
+  void discardRestorableSession() {
+    _pendingRestore = null;
+    _repo.clearActive();
+    notifyListeners();
   }
 
   /// Akhiri (batalkan) sesi. Menit fokus dari blok yang sudah selesai tetap

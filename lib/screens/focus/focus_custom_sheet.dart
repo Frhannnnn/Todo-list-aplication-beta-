@@ -37,6 +37,7 @@ class _FocusCustomSheetState extends State<_FocusCustomSheet> {
   bool _strictMode = false;
   bool _alarm = false;
   bool _vibrate = false;
+  bool _showAdvanced = false;
 
   @override
   Widget build(BuildContext context) {
@@ -106,16 +107,33 @@ class _FocusCustomSheetState extends State<_FocusCustomSheet> {
             const SizedBox(height: 8),
             _toggle('Mulai sesi berikutnya otomatis', _auto,
                 (v) => _auto = v),
-            const SizedBox(height: 12),
-            const Text('Opsi', style: _label),
-            const SizedBox(height: 4),
-            _toggle('Pertahankan layar tetap menyala', _keepScreenOn,
-                (v) => _keepScreenOn = v),
-            _toggle('Kunci navigasi', _lockNavigation,
-                (v) => _lockNavigation = v),
-            _toggle('Strict Mode', _strictMode, (v) => _strictMode = v),
-            _toggle('Alarm selesai', _alarm, (v) => _alarm = v),
-            _toggle('Getaran', _vibrate, (v) => _vibrate = v),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: () => setState(() => _showAdvanced = !_showAdvanced),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    const Expanded(child: Text('Opsi lanjutan', style: _label)),
+                    Icon(
+                        _showAdvanced
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                        color: AppTheme.textSecondary),
+                  ],
+                ),
+              ),
+            ),
+            if (_showAdvanced) ...[
+              _toggle('Pertahankan layar tetap menyala', _keepScreenOn,
+                  (v) => _keepScreenOn = v),
+              _toggle('Kunci navigasi', _lockNavigation,
+                  (v) => _lockNavigation = v),
+              _toggle('Strict Mode', _strictMode, (v) => _strictMode = v),
+              _toggle('Alarm selesai', _alarm, (v) => _alarm = v),
+              _toggle('Getaran', _vibrate, (v) => _vibrate = v),
+            ],
             const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,

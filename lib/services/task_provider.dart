@@ -40,6 +40,18 @@ class TaskProvider with ChangeNotifier {
   List<String> _customScopes = ['Perkuliahan', 'Tugas Rumah', 'Pekerjaan'];
   Map<String, List<String>> _categoriesByScope = {};
 
+  // Kapan data terakhir dicadangkan (ekspor). Untuk pengingat backup.
+  DateTime? _lastBackupAt;
+  DateTime? get lastBackupAt => _lastBackupAt;
+
+  /// Tandai bahwa data baru saja dicadangkan (dipanggil setelah ekspor sukses).
+  Future<void> markBackupDone() async {
+    _lastBackupAt = DateTime.now();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('last_backup_at', _lastBackupAt!.toIso8601String());
+    notifyListeners();
+  }
+
   bool get notifEnabled => _notifEnabled;
   bool get dailyReminderEnabled => _dailyReminderEnabled;
   int get dailyReminderHour => _dailyReminderHour;
@@ -170,6 +182,9 @@ class TaskProvider with ChangeNotifier {
 
   Future<void> _loadCustomData() async {
     final prefs = await SharedPreferences.getInstance();
+
+    final rawBackup = prefs.getString('last_backup_at');
+    if (rawBackup != null) _lastBackupAt = DateTime.tryParse(rawBackup);
 
     final rawScopes = prefs.getStringList('custom_scopes');
     if (rawScopes != null && rawScopes.isNotEmpty) {
@@ -402,6 +417,10 @@ class TaskProvider with ChangeNotifier {
   // ─────────────────────────────────────────────
   // TASKS CRUD
   // ─────────────────────────────────────────────
+
+  /// Muat ulang data dari penyimpanan & hitung ulang peringkat SAW.
+  /// Dipakai untuk pull-to-refresh pada daftar tugas.
+  Future<void> refresh() => _loadTasks();
 
   // Bug #5 Fix: Add try-catch and backup mechanism for JSON corruption
   Future<void> _loadTasks() async {
@@ -706,14 +725,20 @@ class TaskProvider with ChangeNotifier {
     _recalculateSAW();
     await _runScheduler();
     final saved = await _saveTasks();
+    // Penjadwalan notifikasi bersifat best-effort — kegagalannya tidak boleh
+    // menggagalkan simpan tugas (mis. izin exact alarm tidak tersedia).
     if (_notifEnabled) {
-      await _notifService.scheduleTaskNotifications(task);
-      if (_dailyReminderEnabled) {
-        await _notifService.scheduleDailyReminder(
-          hour: _dailyReminderHour,
-          minute: _dailyReminderMinute,
-          activeTasks: tugasAktif,
-        );
+      try {
+        await _notifService.scheduleTaskNotifications(task);
+        if (_dailyReminderEnabled) {
+          await _notifService.scheduleDailyReminder(
+            hour: _dailyReminderHour,
+            minute: _dailyReminderMinute,
+            activeTasks: tugasAktif,
+          );
+        }
+      } catch (e) {
+        debugPrint('Gagal menjadwalkan notifikasi tugas: $e');
       }
     }
     notifyListeners();
@@ -729,7 +754,11 @@ class TaskProvider with ChangeNotifier {
     await _runScheduler();
     final saved = await _saveTasks();
     if (_notifEnabled) {
-      await _notifService.scheduleTaskNotifications(task);
+      try {
+        await _notifService.scheduleTaskNotifications(task);
+      } catch (e) {
+        debugPrint('Gagal menjadwalkan notifikasi tugas: $e');
+      }
     }
     notifyListeners();
     return saved;
@@ -866,16 +895,20 @@ class TaskProvider with ChangeNotifier {
     await _runScheduler();
     final saved = await _saveTasks();
     if (_notifEnabled) {
-      await _notifService.scheduleTaskNotifications(base);
-      if (spawned != null) {
-        await _notifService.scheduleTaskNotifications(spawned);
-        if (_dailyReminderEnabled) {
-          await _notifService.scheduleDailyReminder(
-            hour: _dailyReminderHour,
-            minute: _dailyReminderMinute,
-            activeTasks: tugasAktif,
-          );
+      try {
+        await _notifService.scheduleTaskNotifications(base);
+        if (spawned != null) {
+          await _notifService.scheduleTaskNotifications(spawned);
+          if (_dailyReminderEnabled) {
+            await _notifService.scheduleDailyReminder(
+              hour: _dailyReminderHour,
+              minute: _dailyReminderMinute,
+              activeTasks: tugasAktif,
+            );
+          }
         }
+      } catch (e) {
+        debugPrint('Gagal menjadwalkan notifikasi tugas: $e');
       }
     }
     notifyListeners();
@@ -905,11 +938,20 @@ class TaskProvider with ChangeNotifier {
     await editTugas(id, status: status);
   }
 
-  Future<void> clearAllTasks() async {
-    await _notifService.cancelAllNotifications();
+  /// Hapus seluruh tugas. Prioritaskan pembersihan + penyimpanan lebih dulu;
+  /// pembatalan notifikasi bersifat best-effort agar kegagalan/hang di plugin
+  /// notifikasi tidak membuat penghapusan tidak jadi.
+  Future<bool> clearAllTasks() async {
     _tasks.clear();
-    await _saveTasks();
+    _timeBlocks = [];
+    final saved = await _saveTasks();
     notifyListeners();
+    try {
+      await _notifService.cancelAllNotifications();
+    } catch (e) {
+      debugPrint('Gagal membatalkan notifikasi saat hapus semua: $e');
+    }
+    return saved;
   }
 
   // ─────────────────────────────────────────────

@@ -37,6 +37,13 @@ class AppTheme {
         seedColor: primary,
         brightness: Brightness.light,
       ),
+      // Transisi antar-halaman yang halus & konsisten di semua platform.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
+      ),
       scaffoldBackgroundColor: background,
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
