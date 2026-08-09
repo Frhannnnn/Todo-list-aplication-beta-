@@ -145,24 +145,21 @@ void main() {
       test('Skenario Update Config: Config ter-update', () async {
         // Arrange
         final newConfig = ScheduleConfig(
-          
           workStartHour: 9,
           workEndHour: 17,
-          
         );
 
         // Act
         await taskProvider.updateScheduleConfig(newConfig);
 
         // Assert
-        expect(taskProvider.scheduleConfig.workEndHour, 6);
         expect(taskProvider.scheduleConfig.workStartHour, 9);
+        expect(taskProvider.scheduleConfig.workEndHour, 17);
       });
 
       test('Skenario Config Persistent: Config saved and loaded', () async {
         // Arrange
         final newConfig = ScheduleConfig(
-          
           workStartHour: 8,
           workEndHour: 18,
         );
@@ -175,7 +172,8 @@ void main() {
         await newProvider.init();
 
         // Assert
-        expect(newProvider.scheduleConfig.workEndHour, 7);
+        expect(newProvider.scheduleConfig.workStartHour, 8);
+        expect(newProvider.scheduleConfig.workEndHour, 18);
       });
 
       test('Skenario Default Config: Default values', () async {

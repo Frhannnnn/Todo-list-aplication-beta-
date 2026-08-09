@@ -1,23 +1,25 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Smoke test: memastikan aplikasi bisa dirakit dan dirender tanpa exception,
+// lalu menampilkan Dashboard sebagai tab awal.
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:tugasku/main.dart';
 
 void main() {
-  testWidgets('TugasKu app smoke test', (WidgetTester tester) async {
+  testWidgets('Priora app smoke test', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
     await initializeDateFormatting('id_ID', null);
 
     await tester.pumpWidget(const TugasKuApp());
     await tester.pump();
 
-    expect(find.text('Tugas'), findsOneWidget);
+    // Label tab hanya dirender saat tab itu aktif, dan saat boot tab aktifnya
+    // adalah Dashboard — jadi 'Tugas' memang belum tampil di sini.
     expect(find.text('Dashboard'), findsOneWidget);
+
+    // Header brand pada Dashboard.
+    expect(find.text('Priora'), findsOneWidget);
   });
 }

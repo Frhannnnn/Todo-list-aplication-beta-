@@ -17,7 +17,9 @@ import '../mocks/mock_notification_service.dart';
 import 'package:tugasku/services/ai_task_creator_service.dart';
 
 void main() {
-  
+  // Wajib sebelum memakai TestDefaultBinaryMessengerBinding.instance dan
+  // SharedPreferences.setMockInitialValues di bawah.
+  TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
     // Mock the flutter_local_notifications plugin channel
