@@ -681,9 +681,36 @@ class TaskProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Jaga agar data tak valid tidak pernah masuk ke daftar tugas. Form UI
+  /// sudah memvalidasi, tapi provider adalah lapisan logika bisnis sehingga
+  /// tidak boleh bergantung pada pemanggilnya. Estimasi 0 khususnya berbahaya:
+  /// normalisasi SAW membagi dengan nilai maksimum, sehingga seluruh estimasi
+  /// bernilai 0 akan menghasilkan pembagian nol.
+  void _validasiInputTugas({
+    required String namaTugas,
+    required int tingkatKepentingan,
+    required int estimasiWaktu,
+  }) {
+    if (namaTugas.trim().isEmpty) {
+      throw ArgumentError.value(
+          namaTugas, 'namaTugas', 'Nama tugas tidak boleh kosong');
+    }
+    if (tingkatKepentingan < 1 || tingkatKepentingan > 5) {
+      throw ArgumentError.value(tingkatKepentingan, 'tingkatKepentingan',
+          'Tingkat kepentingan harus 1-5');
+    }
+    if (estimasiWaktu < 1) {
+      throw ArgumentError.value(
+          estimasiWaktu, 'estimasiWaktu', 'Estimasi waktu minimal 1 jam');
+    }
+  }
+
   /// Return `true` bila tugas berhasil ditambah & tersimpan, `false` bila
   /// penyimpanan gagal (lihat [_saveTasks]) — UI wajib menampilkan ini ke
   /// user, bukan mengasumsikan sukses.
+  ///
+  /// Melempar [ArgumentError] bila nama kosong, kepentingan di luar 1-5, atau
+  /// estimasi kurang dari 1 jam.
   Future<bool> tambahTugas({
     required String namaTugas,
     required String lingkupTugas,
@@ -701,6 +728,12 @@ class TaskProvider with ChangeNotifier {
     DateTime? recurrenceEndDate,
     int? recurrenceCount,
   }) async {
+    _validasiInputTugas(
+      namaTugas: namaTugas,
+      tingkatKepentingan: tingkatKepentingan,
+      estimasiWaktu: estimasiWaktu,
+    );
+
     final task = Task(
       id: _uuid.v4(),
       namaTugas: namaTugas,
