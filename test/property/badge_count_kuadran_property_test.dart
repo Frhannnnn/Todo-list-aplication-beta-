@@ -270,7 +270,7 @@ void main() {
             lingkupTugas: 'MK Test',
             deadline: DateTime.now().add(Duration(days: rng.nextInt(30) + 1)),
             tingkatKepentingan: 4, // tepat di batas
-             // tepat di batas
+            tingkatUrgensi: 4, // tepat di batas
             estimasiWaktu: rng.nextInt(10) + 1,
             status: TaskStatus.belumDikerjakan,
             createdAt: DateTime.now(),

@@ -39,4 +39,20 @@ class MockNotificationService implements NotificationService {
   Future<bool> areNotificationsEnabled() async {
     return true;
   }
+
+  // Sesi Fokus — no-op, cukup untuk memenuhi kontrak NotificationService.
+
+  @override
+  void Function(String actionId)? onFocusAction;
+
+  @override
+  Future<void> showFocusNotification({
+    required String taskName,
+    required Duration remaining,
+    required bool running,
+    required bool isBreak,
+  }) async {}
+
+  @override
+  Future<void> cancelFocusNotification() async {}
 }

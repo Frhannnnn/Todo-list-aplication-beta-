@@ -8,7 +8,7 @@ import '../utils/app_theme.dart';
 import '../widgets/task_card_widget.dart';
 import '../widgets/rename_dialog.dart';
 import '../utils/task_status_actions.dart';
-import 'add_edit_task_screen.dart';
+import 'add_edit_task/add_edit_task_screen.dart';
 
 const TextStyle _sheetLabel = TextStyle(
     fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.textPrimary);

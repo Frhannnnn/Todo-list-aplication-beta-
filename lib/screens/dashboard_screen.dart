@@ -11,7 +11,7 @@ import '../widgets/task_card_widget.dart';
 import '../utils/task_status_actions.dart';
 import '../utils/app_assets.dart';
 import '../main.dart';
-import 'add_edit_task_screen.dart';
+import 'add_edit_task/add_edit_task_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});

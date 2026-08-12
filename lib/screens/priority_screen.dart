@@ -6,7 +6,7 @@ import '../models/task_model.dart';
 import '../services/task_provider.dart';
 import '../utils/app_assets.dart';
 import '../utils/app_theme.dart';
-import 'add_edit_task_screen.dart';
+import 'add_edit_task/add_edit_task_screen.dart';
 
 enum EisenhowerQuadrant { doNow, schedule, delegate, eliminate }
 

@@ -98,10 +98,12 @@ void main() {
         // Assert
         expect(taskProvider.totalTugas, 5);
         expect(taskProvider.tasks.length, 5);
-        
-        // Verify order
+
+        // Daftar tugas diurutkan ulang berdasarkan peringkat SAW, bukan urutan
+        // penambahan — jadi yang dijamin adalah kelengkapannya, bukan indeksnya.
+        final nama = taskProvider.tasks.map((t) => t.namaTugas).toSet();
         for (int i = 0; i < 5; i++) {
-          expect(taskProvider.tasks[i].namaTugas, 'Task $i');
+          expect(nama, contains('Task $i'));
         }
       });
 
@@ -459,15 +461,14 @@ void main() {
           estimasiWaktu: 1,
         );
 
+        // Ambil id lebih dulu: updateStatus memicu perhitungan ulang SAW yang
+        // mengurutkan ulang daftar, sehingga indeks tidak stabil antar panggilan.
+        final ids = taskProvider.tasks.map((t) => t.id).toList();
+
         // Mark both as completed
-        await taskProvider.updateStatus(
-          taskProvider.tasks[0].id,
-          TaskStatus.selesai,
-        );
-        await taskProvider.updateStatus(
-          taskProvider.tasks[1].id,
-          TaskStatus.selesai,
-        );
+        for (final id in ids) {
+          await taskProvider.updateStatus(id, TaskStatus.selesai);
+        }
 
         // Assert
         expect(taskProvider.completedTasks.length, 2);

@@ -9,7 +9,7 @@ import '../utils/app_theme.dart';
 import '../widgets/task_card_widget.dart';
 import '../utils/task_status_actions.dart';
 import '../utils/recurrence.dart';
-import 'add_edit_task_screen.dart';
+import 'add_edit_task/add_edit_task_screen.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
